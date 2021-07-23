@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/go-openapi/runtime v0.19.29
-	github.com/google/go-cmp v0.5.6 // indirect
+	github.com/google/go-github/v37 v37.0.0
 	github.com/google/uuid v1.1.2 // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/mattn/go-sqlite3 v1.14.8
