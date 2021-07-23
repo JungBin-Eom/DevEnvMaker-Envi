@@ -2,19 +2,39 @@ package app
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/JungBin-Eom/DevEnvMaker-Envi/model"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 	"github.com/unrolled/render"
 	"github.com/urfave/negroni"
 )
 
+var store = sessions.NewCookieStore([]byte(os.Getenv("SESSEION_KEY")))
 var rd *render.Render
 
 type AppHandler struct {
 	http.Handler
 	db model.DBHandler
+}
+
+var getSessionID = func(r *http.Request) string {
+	session, err := store.Get(r, "session")
+	if err != nil {
+		return ""
+	}
+
+	val := session.Values["id"]
+	if val == nil {
+		return ""
+	}
+	return val.(string)
+}
+
+func (a *AppHandler) IndexHandler(rw http.ResponseWriter, r *http.Request) {
+	http.Redirect(rw, r, "/html/index.html", http.StatusTemporaryRedirect)
 }
 
 func (a *AppHandler) LoginHandler(rw http.ResponseWriter, r *http.Request) {
@@ -31,6 +51,7 @@ func MakeHandler(filepath string) *AppHandler {
 		db:      model.NewDBHandler(filepath),
 	}
 
+	r.HandleFunc("/", a.IndexHandler)
 	r.HandleFunc("/signin", a.LoginHandler)
 	r.HandleFunc("/auth/github/login", a.GithubLoginHandler)
 	r.HandleFunc("/auth/github/callback", a.GithubAuthCallback)
