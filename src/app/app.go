@@ -17,13 +17,13 @@ type AppHandler struct {
 	db model.DBHandler
 }
 
-func (a *AppHandler) IndexHandler(rw http.ResponseWriter, r *http.Request) {
-	rd.Text(rw, http.StatusOK, "Index")
+func (a *AppHandler) LoginHandler(rw http.ResponseWriter, r *http.Request) {
+	http.Redirect(rw, r, "/html/signIn.html", http.StatusTemporaryRedirect)
 }
 
 func MakeHandler(filepath string) *AppHandler {
 	r := mux.NewRouter()
-	neg := negroni.Classic()
+	neg := negroni.New(negroni.NewRecovery(), negroni.NewLogger(), negroni.NewStatic(http.Dir("public")))
 	neg.UseHandler(r)
 
 	a := &AppHandler{
@@ -31,7 +31,12 @@ func MakeHandler(filepath string) *AppHandler {
 		db:      model.NewDBHandler(filepath),
 	}
 
-	r.HandleFunc("/", a.IndexHandler)
+	r.HandleFunc("/signin", a.LoginHandler)
+	r.HandleFunc("/auth/github/login", a.GithubLoginHandler)
+	r.HandleFunc("/auth/github/callback", a.GithubAuthCallback)
+
+	// r.HandleFunc("/auth/google/login", a.GoogleLoginHandler)
+	// r.HandleFunc("/auth/google/callback", a.GoogleAuthCallback)
 
 	// Swagger Handlers
 	opts := middleware.RedocOpts{SpecURL: "/swagger.yml"}

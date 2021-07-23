@@ -21,9 +21,9 @@ func newSqliteHandler(filepath string) DBHandler {
 	}
 	statement, _ := database.Prepare(
 		`CREATE TABLE IF NOT EXISTS users (
-			id	INTEGER PRIMARY KEY AUTOINCREMENT
-			password STRING
-			name STRING
+			id	INTEGER PRIMARY KEY AUTOINCREMENT,
+			password STRING,
+			name STRING,
 			github STRING
 		);`)
 	statement.Exec()
