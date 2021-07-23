@@ -14,6 +14,17 @@ func (s *sqliteHandler) Close() {
 	s.db.Close()
 }
 
-func newSqliteHandler() {
-	database, err := sql.Open("sqlite3", "hello")
+func newSqliteHandler(filepath string) DBHandler {
+	database, err := sql.Open("sqlite3", filepath)
+	if err != nil {
+		panic(err)
+	}
+	statement, _ := database.Prepare(
+		`CREATE TABLE IF NOT EXISTS users (
+			id	INTEGER PRIMARY KEY AUTOINCREMENT
+			password STRING
+			name STRING
+			github 
+			`
+	)
 }
