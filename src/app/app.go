@@ -37,10 +37,6 @@ func (a *AppHandler) IndexHandler(rw http.ResponseWriter, r *http.Request) {
 	http.Redirect(rw, r, "/html/index.html", http.StatusTemporaryRedirect)
 }
 
-func (a *AppHandler) LoginHandler(rw http.ResponseWriter, r *http.Request) {
-	http.Redirect(rw, r, "/html/signIn.html", http.StatusTemporaryRedirect)
-}
-
 func MakeHandler(filepath string) *AppHandler {
 	r := mux.NewRouter()
 	neg := negroni.New(negroni.NewRecovery(), negroni.NewLogger(), negroni.NewStatic(http.Dir("public")))
@@ -52,7 +48,6 @@ func MakeHandler(filepath string) *AppHandler {
 	}
 
 	r.HandleFunc("/", a.IndexHandler)
-	r.HandleFunc("/signin", a.LoginHandler)
 	r.HandleFunc("/auth/github/login", a.GithubLoginHandler)
 	r.HandleFunc("/auth/github/callback", a.GithubAuthCallback)
 

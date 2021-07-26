@@ -1,0 +1,22 @@
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.github-login, .github-signup {
+  background-color: green;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.github-signup a {
+  text-decoration: none;
+  color: white;
+}
+
+.github-login a {
+  text-decoration: none;
+  color: white;
+}
