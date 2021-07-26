@@ -24,7 +24,8 @@ func newSqliteHandler(filepath string) DBHandler {
 			id	INTEGER PRIMARY KEY AUTOINCREMENT,
 			password STRING,
 			name STRING,
-			github STRING
+			githubId STRING,
+			sessionId STRING
 		);`)
 	statement.Exec()
 	return &sqliteHandler{database}

@@ -34,12 +34,25 @@ var getSessionID = func(r *http.Request) int64 {
 	return val.(int64)
 }
 
+var getSessionName = func(r *http.Request) string {
+	session, err := store.Get(r, "session")
+	if err != nil {
+		return ""
+	}
+
+	val := session.Values["name"]
+	if val == nil {
+		return ""
+	}
+	return val.(string)
+}
+
 func (a *AppHandler) IndexHandler(rw http.ResponseWriter, r *http.Request) {
 	http.Redirect(rw, r, "/html/index.html", http.StatusTemporaryRedirect)
 }
 
 func CheckSignin(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
-	// if request URL is /signin.html, then next()
+	// if request URL is /signIn.html, then next()
 	if strings.Contains(r.URL.Path, "/signIn") || strings.Contains(r.URL.Path, "/auth") {
 		next(w, r)
 		return
@@ -48,17 +61,16 @@ func CheckSignin(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) 
 	// if user already signed in
 	sessionID := getSessionID(r)
 	if sessionID != 0 {
-		next(w, r) // NewStatic 핸들러로 넘어간다는 뜻
+		next(w, r)
 		return
 	}
-	// if not user sign in
 	// redirect signin.html
 	http.Redirect(w, r, "/html/signIn.html", http.StatusTemporaryRedirect)
 }
 
 func MakeHandler(filepath string) *AppHandler {
 	r := mux.NewRouter()
-	neg := negroni.New(negroni.NewRecovery(), negroni.NewLogger(), negroni.HandlerFunc(CheckSignin), negroni.NewStatic(http.Dir("public")))
+	neg := negroni.New(negroni.NewRecovery(), negroni.NewLogger(), negroni.NewStatic(http.Dir("public")), negroni.HandlerFunc(CheckSignin))
 	neg.UseHandler(r)
 
 	a := &AppHandler{
