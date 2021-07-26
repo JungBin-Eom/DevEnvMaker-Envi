@@ -2,11 +2,30 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Envi Signin</title>
+  <link rel="stylesheet" href="../css/signIn.css">
+  <title>DevEnv Maker Envi</title>
 </head>
 <body>
-  <p>
-    <a href="../auth/github/login">GitHub Login</a>
-  </p>
+  <div class="container">
+    GitHub 아이디가 없으면 로그인할 수 없습니다.
+    <div class="github-signup">
+      <a href="https://github.com/signup?ref_cta=Sign+up&ref_loc=header+logged+out&ref_page=%2F&source=header-home" target="_blank">GitHub 아이디 만들러 가기</a>
+    </div>
+    <div class="form-floating">
+      <input type="id" class="form-control" id="floatingInput" placeholder="ID">
+      <label for="floatingInput">ID</label>
+    </div>
+    <div class="form-floating">
+      <input type="password" class="form-control" id="floatingPassword" placeholder="Password">
+      <label for="floatingPassword">Password</label>
+    </div>
+    <button type="submit">Sign in</button>
+    <div class="github-login">
+      <a href="/auth/github/login">GitHub로 로그인하기</a>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.4.1.js"></script>
+  <script src="../script/signin.js"></script>
 </body>
 </html>

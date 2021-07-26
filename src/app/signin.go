@@ -4,9 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -49,18 +47,17 @@ func getGithubRepos(code string) ([]*gogithub.Repository, error) {
 	return repos, nil
 }
 
-func getGithubUserInfo(code string) ([]byte, error) {
+func getGithubUserInfo(code string) (*gogithub.User, error) {
 	token, err := githubOauthConfig.Exchange(context.Background(), code)
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(token)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to Exchange %s\n", err.Error())
+		return &gogithub.User{}, fmt.Errorf("Failed to Exchange %s\n", err.Error())
 	}
 	tc := oauth2.NewClient(ctx, ts)
 	client := gogithub.NewClient(tc)
-	_, resp, err := client.Users.Get(ctx, "")
-
-	return ioutil.ReadAll(resp.Body)
+	user, _, err := client.Users.Get(context.Background(), "")
+	return user, nil
 }
 
 func (a *AppHandler) GithubLoginHandler(rw http.ResponseWriter, r *http.Request) {
@@ -77,37 +74,25 @@ func (a *AppHandler) GithubAuthCallback(rw http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	data, err := getGithubUserInfo(r.FormValue("code"))
+	userInfo, err := getGithubUserInfo(r.FormValue("code"))
 	if err != nil {
 		log.Println(err.Error())
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	// Store ID info into Session cookie
+	session, err := store.Get(r, "session")
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	var user map[string]interface{}
-	json.Unmarshal(data, &user)
-	fmt.Println(user)
-
-	// 	// Store ID info into Session cookie
-	// 	var userInfo GoogleUserID
-	// 	err = json.Unmarshal(data, &userInfo)
-	// 	if err != nil {
-	// 		log.Println(err.Error())
-	// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-	// 		return
-	// 	}
-	// 	session, err := store.Get(r, "session")
-	// 	if err != nil {
-	// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-	// 		return
-	// 	}
-
-	// 	session.Values["id"] = userInfo.ID
-	// 	err = session.Save(r, w)
-	// 	if err != nil {
-	// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-	// 		return
-	// 	}
-	// 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
-	// }
+	session.Values["id"] = userInfo.ID
+	session.Values["login"] = userInfo.Login
+	err = session.Save(r, rw)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(rw, r, "/", http.StatusTemporaryRedirect)
 }
