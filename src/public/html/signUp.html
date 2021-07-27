@@ -1,23 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>DevEnv Maker Envi</title>
+  <meta charset="utf-8"/>
+  <title>Envi SignUp</title>
+  <link rel="stylesheet" href="../css/signup.css">
 </head>
 <body>
-  <div class="container">
-    <div class="form-floating">
-      <label for="floatingInput">ID</label>
-      <input type="id" class="form-control" id="floatingInput" placeholder="ID">
-    </div>
-    <div class="form-floating">
-      <label for="floatingPassword">Password</label>
-      <input type="password" class="form-control" id="floatingPassword" placeholder="Password">
-    </div>
-    <button type="submit">Sign Up</button>
-  </div>
-<!-- 
+  <section>
+    <h1>Envi 회원가입</h1>
+    <form class="info" name="login" method="post">
+      <div>아이디</div>
+      <input class="id-input" type="text" name="user_ID" placeholder="abc1234">
+      <button class="btn-dupcheck" type="button">중복 확인</button>
+      <div>비밀번호</div>
+      <input class="pw-input1" type="password" name="user_PW" value="123456">
+      <div>비밀번호 확인</div>
+      <input class="pw-input2" type="password" name="user_PWcheck" value="123456">
+      <div>이메일</div>
+      <input class="email" type="email" name="user_email" placeholder="email@example.com">
+      <br><br>
+      <button class="btn-submit" type="submit">제출</button>
+    </form>
+  </section>
   <script src="https://code.jquery.com/jquery-3.4.1.js"></script>
-  <script src="../script/signin.js"></script> -->
+  <script src="../script/signup.js"></script>
 </body>
 </html>

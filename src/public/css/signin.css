@@ -20,3 +20,8 @@ body {
   text-decoration: none;
   color: white;
 }
+
+.signup a {
+  text-decoration: none;
+  color: black;
+}

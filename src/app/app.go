@@ -52,11 +52,10 @@ func (a *AppHandler) IndexHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AppHandler) SignUpHandler(rw http.ResponseWriter, r *http.Request) {
-	http.Redirect(rw, r, "/html/signUp.html", http.StatusTemporaryRedirect)
+	http.Redirect(rw, r, "/html/signup.html", http.StatusTemporaryRedirect)
 }
 
 func CheckSignin(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
-	// if request URL is /signIn.html, then next()
 	if strings.Contains(r.URL.Path, "/sign") || strings.Contains(r.URL.Path, "/auth") {
 		next(rw, r)
 		return
@@ -68,13 +67,26 @@ func CheckSignin(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc)
 		next(rw, r)
 		return
 	}
+
 	// redirect signin.html
-	http.Redirect(rw, r, "/html/signIn.html", http.StatusTemporaryRedirect)
+	http.Redirect(rw, r, "/html/signin.html", http.StatusTemporaryRedirect)
+}
+
+type Duplicated struct {
+	Duplicated bool `json:"duplicated"`
+}
+
+func (a *AppHandler) DupCheckHandler(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, _ := vars["id"]
+	dup := a.db.CheckIdDup(id) // T: Dup, F: Not Dup
+	rd.JSON(rw, http.StatusOK, Duplicated{dup})
 }
 
 func MakeHandler(filepath string) *AppHandler {
 	r := mux.NewRouter()
-	neg := negroni.New(negroni.NewRecovery(), negroni.NewLogger(), negroni.NewStatic(http.Dir("public")), negroni.HandlerFunc(CheckSignin))
+
+	neg := negroni.New(negroni.NewRecovery(), negroni.NewLogger(), negroni.HandlerFunc(CheckSignin), negroni.NewStatic(http.Dir("public")))
 	neg.UseHandler(r)
 
 	a := &AppHandler{
@@ -84,6 +96,7 @@ func MakeHandler(filepath string) *AppHandler {
 
 	r.HandleFunc("/", a.IndexHandler)
 	r.HandleFunc("/signup", a.SignUpHandler)
+	r.HandleFunc("/iddup/{id:[A-z]+}", a.DupCheckHandler).Methods("GET")
 	// r.HandleFunc("/repos", a.Repository).Methods("GET")
 	r.HandleFunc("/auth/github/login", a.GithubLoginHandler)
 	r.HandleFunc("/auth/github/callback", a.GithubAuthCallback)
