@@ -87,12 +87,19 @@ func (a *AppHandler) GithubAuthCallback(rw http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	session.Values["id"] = userInfo.ID
-	session.Values["login"] = userInfo.Login
+	session.Values["id"] = *userInfo.ID
+	session.Values["login"] = *userInfo.Login
 	err = session.Save(r, rw)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(rw, r, "/", http.StatusTemporaryRedirect)
+
+	val := getSessionID(r)
+	result := a.db.IsUser(val)
+	if result == false {
+		http.Redirect(rw, r, "/signup", http.StatusTemporaryRedirect)
+	} else {
+		http.Redirect(rw, r, "/", http.StatusTemporaryRedirect)
+	}
 }

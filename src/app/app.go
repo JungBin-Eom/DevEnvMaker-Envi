@@ -1,10 +1,13 @@
 package app
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
 
+	"github.com/JungBin-Eom/DevEnvMaker-Envi/data"
 	"github.com/JungBin-Eom/DevEnvMaker-Envi/model"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/gorilla/mux"
@@ -14,14 +17,14 @@ import (
 )
 
 var store = sessions.NewCookieStore([]byte(os.Getenv("SESSEION_KEY")))
-var rd *render.Render
+var rd *render.Render = render.New()
 
 type AppHandler struct {
 	http.Handler
 	db model.DBHandler
 }
 
-var getSessionID = func(r *http.Request) int64 {
+var getSessionID = func(r *http.Request) int {
 	session, err := store.Get(r, "session")
 	if err != nil {
 		return 0
@@ -31,7 +34,7 @@ var getSessionID = func(r *http.Request) int64 {
 	if val == nil {
 		return 0
 	}
-	return val.(int64)
+	return int(val.(int64))
 }
 
 var getSessionName = func(r *http.Request) string {
@@ -44,6 +47,7 @@ var getSessionName = func(r *http.Request) string {
 	if val == nil {
 		return ""
 	}
+	fmt.Println(val.(string))
 	return val.(string)
 }
 
@@ -53,6 +57,31 @@ func (a *AppHandler) IndexHandler(rw http.ResponseWriter, r *http.Request) {
 
 func (a *AppHandler) SignUpHandler(rw http.ResponseWriter, r *http.Request) {
 	http.Redirect(rw, r, "/html/signup.html", http.StatusTemporaryRedirect)
+}
+
+type Duplicated struct {
+	Duplicated bool `json:"duplicated"`
+}
+
+func (a *AppHandler) DupCheckHandler(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, _ := vars["id"]
+	dup := a.db.CheckIdDup(id) // T: Dup, F: Not Dup
+	rd.JSON(rw, http.StatusOK, Duplicated{dup})
+}
+
+func (a *AppHandler) UserRegisterHandler(rw http.ResponseWriter, r *http.Request) {
+	var user data.RegUser
+	sessionId := getSessionID(r)
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&user)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+	}
+	err = a.db.RegisterUser(user, sessionId)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func CheckSignin(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
@@ -72,17 +101,6 @@ func CheckSignin(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc)
 	http.Redirect(rw, r, "/html/signin.html", http.StatusTemporaryRedirect)
 }
 
-type Duplicated struct {
-	Duplicated bool `json:"duplicated"`
-}
-
-func (a *AppHandler) DupCheckHandler(rw http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id, _ := vars["id"]
-	dup := a.db.CheckIdDup(id) // T: Dup, F: Not Dup
-	rd.JSON(rw, http.StatusOK, Duplicated{dup})
-}
-
 func MakeHandler(filepath string) *AppHandler {
 	r := mux.NewRouter()
 
@@ -96,7 +114,8 @@ func MakeHandler(filepath string) *AppHandler {
 
 	r.HandleFunc("/", a.IndexHandler)
 	r.HandleFunc("/signup", a.SignUpHandler)
-	r.HandleFunc("/iddup/{id:[A-z]+}", a.DupCheckHandler).Methods("GET")
+	r.HandleFunc("/signup/idcheck/{id:[a-zA-Z0-9]+}", a.DupCheckHandler).Methods("GET")
+	r.HandleFunc("/signup/register", a.UserRegisterHandler).Methods("POST")
 	// r.HandleFunc("/repos", a.Repository).Methods("GET")
 	r.HandleFunc("/auth/github/login", a.GithubLoginHandler)
 	r.HandleFunc("/auth/github/callback", a.GithubAuthCallback)
