@@ -4,19 +4,39 @@ body {
   justify-content: center;
 }
 
+.container {
+  text-align: center;
+}
+
 .github-login, .github-signup {
   background-color: green;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin: 10px;
 }
 
-.github-signup a {
+.github-signup a, .github-login a {
   text-decoration: none;
   color: white;
 }
 
-.github-login a {
-  text-decoration: none;
-  color: white;
+.form-floating {
+  display: flex;
+  align-items: left;
+  justify-content: left;
+}
+
+.form-floating label {
+  margin-left: 10px;
+}
+
+.form {
+  display: inline-block;
+  text-align: center;
+  width: 300px;
+}
+
+.form > button {
+  margin-top: 10px;
 }

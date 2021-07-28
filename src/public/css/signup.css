@@ -7,3 +7,7 @@ body {
 .info div {
   margin-top: 10px;
 }
+
+input {
+  background-color: #fff;
+}

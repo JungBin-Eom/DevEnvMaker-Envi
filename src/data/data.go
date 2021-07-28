@@ -5,3 +5,8 @@ type RegUser struct {
 	Password string `json:"password"`
 	Email    string `json:"email"`
 }
+
+type Login struct {
+	Id       string `json:"id"`
+	Password string `json:"password"`
+}

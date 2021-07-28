@@ -7,25 +7,28 @@
 </head>
 <body>
   <div class="container">
-    GitHub 아이디가 없으면 로그인할 수 없습니다.
-    <div class="github-signup">
-      <a href="https://github.com/signup?ref_cta=Sign+up&ref_loc=header+logged+out&ref_page=%2F&source=header-home" target="_blank">GitHub 아이디 만들러 가기</a>
-    </div>
-    <div class="form-floating">
-      <input type="id" class="form-control" id="floatingInput" placeholder="ID">
-      <label for="floatingInput">ID</label>
-    </div>
-    <div class="form-floating">
-      <input type="password" class="form-control" id="floatingPassword" placeholder="Password">
-      <label for="floatingPassword">Password</label>
-    </div>
-    <button type="submit" onclick="location.href='/signin'">Sign in</button>
-    <div class="github-login">
-      <a href="/auth/github/login">GitHub로 로그인하기</a>
+    <h1>Development Environment Maker Envi</h1>
+    GitHub 아이디가 없으면 로그인할 수 없습니다.<br>
+    <div class="form">
+      <div class="github-signup">
+        <a href="https://github.com/signup?ref_cta=Sign+up&ref_loc=header+logged+out&ref_page=%2F&source=header-home" target="_blank">GitHub 아이디 만들러 가기</a>
+      </div>
+      <div class="form-floating">
+        <input type="id" class="id-input" id="floatingInput" placeholder="ID">
+        <label for="floatingInput">ID</label>
+      </div>
+      <div class="form-floating">
+        <input type="password" class="pw-input" id="floatingPassword" placeholder="Password">
+        <label for="floatingPassword">Password</label>
+      </div>
+      <button class="btn-submit" type="button">Sign in</button>
+      <div class="github-login">
+        <a href="/auth/github/login">GitHub로 로그인하기</a>
+      </div>
     </div>
   </div>
-<!-- 
+
   <script src="https://code.jquery.com/jquery-3.4.1.js"></script>
-  <script src="../script/signin.js"></script> -->
+  <script src="../script/signin.js"></script>
 </body>
 </html>

@@ -33,12 +33,12 @@ func (s *sqliteHandler) CheckIdDup(id string) bool {
 }
 
 func (s *sqliteHandler) RegisterUser(user data.RegUser, sessionId int) error {
-	// statement, err := s.db.Prepare("INSERT INTO users (id, password, email, sessionId) VALUES (?, ?, ?, ?)")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// result, err := statement.Exec(user.Id, user.Password, user.Email, sessionId)
-	return nil
+	statement, err := s.db.Prepare("INSERT INTO users (id, password, email, sessionId) VALUES (?, ?, ?, ?)")
+	if err != nil {
+		panic(err)
+	}
+	_, err = statement.Exec(user.Id, user.Password, user.Email, sessionId)
+	return err
 }
 
 func (s *sqliteHandler) IsUser(sessionId int) bool {
@@ -56,6 +56,10 @@ func (s *sqliteHandler) IsUser(sessionId int) bool {
 	} else {
 		return true
 	}
+}
+
+func (s *sqliteHandler) AuthUser(user data.Login) bool {
+	return true
 }
 
 func newSqliteHandler(filepath string) DBHandler {

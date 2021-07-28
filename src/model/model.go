@@ -7,6 +7,7 @@ type DBHandler interface {
 	CheckIdDup(string) bool
 	RegisterUser(data.RegUser, int) error
 	IsUser(int) bool
+	AuthUser(data.Login) bool
 }
 
 func NewDBHandler(filepath string) DBHandler {

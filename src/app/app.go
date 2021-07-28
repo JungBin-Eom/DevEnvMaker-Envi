@@ -2,7 +2,6 @@ package app
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -22,6 +21,10 @@ var rd *render.Render = render.New()
 type AppHandler struct {
 	http.Handler
 	db model.DBHandler
+}
+
+type Success struct {
+	Success bool `json:"success"`
 }
 
 var getSessionID = func(r *http.Request) int {
@@ -47,7 +50,6 @@ var getSessionName = func(r *http.Request) string {
 	if val == nil {
 		return ""
 	}
-	fmt.Println(val.(string))
 	return val.(string)
 }
 
@@ -55,8 +57,23 @@ func (a *AppHandler) IndexHandler(rw http.ResponseWriter, r *http.Request) {
 	http.Redirect(rw, r, "/html/index.html", http.StatusTemporaryRedirect)
 }
 
+func (a *AppHandler) SignInHandler(rw http.ResponseWriter, r *http.Request) {
+	http.Redirect(rw, r, "/html/signin.html", http.StatusTemporaryRedirect)
+}
+
 func (a *AppHandler) SignUpHandler(rw http.ResponseWriter, r *http.Request) {
 	http.Redirect(rw, r, "/html/signup.html", http.StatusTemporaryRedirect)
+}
+
+func (a *AppHandler) LoginHandler(rw http.ResponseWriter, r *http.Request) {
+	var user data.Login
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&user)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+	}
+	login := a.db.AuthUser(user)
+	rd.JSON(rw, http.StatusOK, Success{login})
 }
 
 type Duplicated struct {
@@ -82,6 +99,7 @@ func (a *AppHandler) UserRegisterHandler(rw http.ResponseWriter, r *http.Request
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 	}
+	rd.JSON(rw, http.StatusOK, Success{true})
 }
 
 func CheckSignin(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
@@ -113,6 +131,8 @@ func MakeHandler(filepath string) *AppHandler {
 	}
 
 	r.HandleFunc("/", a.IndexHandler)
+	r.HandleFunc("/signin", a.SignInHandler)
+	r.HandleFunc("/signin", a.LoginHandler).Methods("POST")
 	r.HandleFunc("/signup", a.SignUpHandler)
 	r.HandleFunc("/signup/idcheck/{id:[a-zA-Z0-9]+}", a.DupCheckHandler).Methods("GET")
 	r.HandleFunc("/signup/register", a.UserRegisterHandler).Methods("POST")

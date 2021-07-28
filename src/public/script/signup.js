@@ -18,6 +18,18 @@ $('.btn-submit').click(function(){
   } else {
     $('.pw-input1').css({'background-color':'#d6ffd1'});
     $('.pw-input2').css({'background-color':'#d6ffd1'});
-    
+    fetch('/signup/register', {
+      method: 'post',
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+          id: $('.id-input').val(),
+          password: $('.pw-input1').val(),
+          email: $('.email-input').val()
+      })
+    });
+    alert("회원가입 완료!")
+    location.href="/html/signin.html"
   }
 })
