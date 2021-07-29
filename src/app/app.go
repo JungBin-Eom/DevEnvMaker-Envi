@@ -72,8 +72,22 @@ func (a *AppHandler) LoginHandler(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 	}
-	login := a.db.AuthUser(user)
-	rd.JSON(rw, http.StatusOK, Success{login})
+	login, sessionId := a.db.AuthUser(user)
+	if login == true {
+		session, err := store.Get(r, "session")
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+		}
+
+		session.Values["id"] = int64(sessionId)
+		err = session.Save(r, rw)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+		}
+		rd.JSON(rw, http.StatusOK, Success{login})
+	} else {
+		rd.JSON(rw, http.StatusBadRequest, Success{login})
+	}
 }
 
 type Duplicated struct {
@@ -131,7 +145,7 @@ func MakeHandler(filepath string) *AppHandler {
 	}
 
 	r.HandleFunc("/", a.IndexHandler)
-	r.HandleFunc("/signin", a.SignInHandler)
+	r.HandleFunc("/signin", a.SignInHandler).Methods("GET")
 	r.HandleFunc("/signin", a.LoginHandler).Methods("POST")
 	r.HandleFunc("/signup", a.SignUpHandler)
 	r.HandleFunc("/signup/idcheck/{id:[a-zA-Z0-9]+}", a.DupCheckHandler).Methods("GET")

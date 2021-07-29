@@ -58,8 +58,29 @@ func (s *sqliteHandler) IsUser(sessionId int) bool {
 	}
 }
 
-func (s *sqliteHandler) AuthUser(user data.Login) bool {
-	return true
+func (s *sqliteHandler) AuthUser(user data.Login) (bool, int) {
+	row, err := s.db.Query("SELECT COUNT(*) FROM users WHERE id=? AND password=?", user.Id, user.Password)
+	if err != nil {
+		panic(err)
+	}
+	defer row.Close()
+
+	row.Next()
+	var count int
+	row.Scan(&count)
+	if count == 0 {
+		return false, 0
+	} else {
+		session, err := s.db.Query("SELECT sessionId FROM users WHERE id=?", user.Id)
+		if err != nil {
+			panic(err)
+		}
+		defer session.Close()
+		session.Next()
+		var sessionId int
+		session.Scan(&sessionId)
+		return true, sessionId
+	}
 }
 
 func newSqliteHandler(filepath string) DBHandler {

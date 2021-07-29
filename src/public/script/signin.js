@@ -6,8 +6,16 @@ $('.btn-submit').click(function(){
     },
     body: JSON.stringify({
         id: $('.id-input').val(),
-        password: $('.pw-input1').val(),
+        password: $('.pw-input').val(),
       })
+  })
+  .then(res => res.json())
+  .then(res => {
+    console.log(res)
+    if (res.success == true) {
+      location.href="/"
+    } else {
+      alert("입력한 정보가 정확하지 않습니다.")
+    }
   });
-  location.href="/html/signin.html"
 })
