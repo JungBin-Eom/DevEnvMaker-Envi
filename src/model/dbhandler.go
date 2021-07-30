@@ -88,13 +88,31 @@ func newSqliteHandler(filepath string) DBHandler {
 	if err != nil {
 		panic(err)
 	}
-	statement, _ := database.Prepare(
+	createUser, _ := database.Prepare(
 		`CREATE TABLE IF NOT EXISTS users (
 			id	STRING PRIMARY KEY,
 			password STRING,
 			email STRING,
-			sessionId INT
+			sessionId INTEGER
 		);`)
-	statement.Exec()
+	createProject, _ := database.Prepare(
+		`CREATE TABLE IF NOT EXISTS project (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name STRING,
+			owner STRING,
+			FOREIGN KEY(owner) REFERENCES users(id)
+		);`)
+	createApplication, _ := database.Prepare(
+		`CREATE TABLE IF NOT EXISTS application (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			naem STRING,
+			owner STRING,
+			project STRING,
+			FOREIGN KEY(owner) REFERENCES users(id),
+			FOREIGN KEY(project) REFERENCES project(id)
+		);`)
+	createUser.Exec()
+	createProject.Exec()
+	createApplication.Exec()
 	return &sqliteHandler{database}
 }
