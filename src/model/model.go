@@ -8,6 +8,7 @@ type DBHandler interface {
 	RegisterUser(data.RegUser, int) error
 	IsUser(int) bool
 	AuthUser(data.Login) (bool, int)
+	CreateProject(data.NewProject, int) error
 }
 
 func NewDBHandler(filepath string) DBHandler {

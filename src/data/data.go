@@ -10,3 +10,7 @@ type Login struct {
 	Id       string `json:"id"`
 	Password string `json:"password"`
 }
+
+type NewProject struct {
+	Name string `json:"name"`
+}

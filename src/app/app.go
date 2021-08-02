@@ -116,6 +116,22 @@ func (a *AppHandler) UserRegisterHandler(rw http.ResponseWriter, r *http.Request
 	rd.JSON(rw, http.StatusOK, Success{true})
 }
 
+func (a *AppHandler) CreateProjectHandler(rw http.ResponseWriter, r *http.Request) {
+	var newprj data.NewProject
+	sessionId := getSessionID(r)
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&newprj)
+	if err != nil {
+		// http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+	}
+	err = a.db.CreateProject(newprj, sessionId)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+	}
+	rd.JSON(rw, http.StatusOK, Success{true})
+}
+
 func CheckSignin(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	if strings.Contains(r.URL.Path, "/sign") || strings.Contains(r.URL.Path, "/auth") {
 		next(rw, r)
@@ -150,6 +166,9 @@ func MakeHandler(filepath string) *AppHandler {
 	r.HandleFunc("/signup", a.SignUpHandler)
 	r.HandleFunc("/signup/idcheck/{id:[a-zA-Z0-9]+}", a.DupCheckHandler).Methods("GET")
 	r.HandleFunc("/signup/register", a.UserRegisterHandler).Methods("POST")
+
+	r.HandleFunc("/project", a.CreateProjectHandler).Methods("POST")
+
 	// r.HandleFunc("/repos", a.Repository).Methods("GET")
 	r.HandleFunc("/auth/github/login", a.GithubLoginHandler)
 	r.HandleFunc("/auth/github/callback", a.GithubAuthCallback)

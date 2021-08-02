@@ -83,6 +83,15 @@ func (s *sqliteHandler) AuthUser(user data.Login) (bool, int) {
 	}
 }
 
+func (s *sqliteHandler) CreateProject(project data.NewProject, sessionId int) error {
+	statement, err := s.db.Prepare("INSERT INTO project (name, owner) VALUES (?, ?)")
+	if err != nil {
+		panic(err)
+	}
+	_, err = statement.Exec(project.Name, sessionId)
+	return err
+}
+
 func newSqliteHandler(filepath string) DBHandler {
 	database, err := sql.Open("sqlite3", filepath)
 	if err != nil {
@@ -99,16 +108,16 @@ func newSqliteHandler(filepath string) DBHandler {
 		`CREATE TABLE IF NOT EXISTS project (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name STRING,
-			owner STRING,
-			FOREIGN KEY(owner) REFERENCES users(id)
+			owner INTEGER,
+			FOREIGN KEY(owner) REFERENCES users(sessionId)
 		);`)
 	createApplication, _ := database.Prepare(
 		`CREATE TABLE IF NOT EXISTS application (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			naem STRING,
-			owner STRING,
+			name STRING,
+			owner INTEGER,
 			project STRING,
-			FOREIGN KEY(owner) REFERENCES users(id),
+			FOREIGN KEY(owner) REFERENCES users(sessionId),
 			FOREIGN KEY(project) REFERENCES project(id)
 		);`)
 	createUser.Exec()

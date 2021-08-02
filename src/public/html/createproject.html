@@ -31,7 +31,7 @@
         <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
 
             <!-- Sidebar - Brand -->
-            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="index.html">
+            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="../html/index.html">
                 <div class="sidebar-brand-text mx-3">Envi</div>
             </a>
 
@@ -40,7 +40,7 @@
 
             <!-- Nav Item - Dashboard -->
             <li class="nav-item active">
-                <a class="nav-link" href="index.html">
+                <a class="nav-link" href="../html/index.html">
                     <span>Dashboard</span></a>
             </li>
 
@@ -60,8 +60,9 @@
                 </a>
                 <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
                     <div class="bg-white py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="buttons.html">Buttons</a>
-                        <a class="collapse-item" href="cards.html">Cards</a>
+                        <h6 class="collapse-header">There is no project.</h6>
+                        <!-- <a class="collapse-item" href="buttons.html">Buttons</a>
+                        <a class="collapse-item" href="cards.html">Cards</a> -->
                     </div>
                 </div>
             </li>
@@ -75,10 +76,11 @@
                 <div id="collapseUtilities" class="collapse" aria-labelledby="headingUtilities"
                     data-parent="#accordionSidebar">
                     <div class="bg-white py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="utilities-color.html">Colors</a>
+                        <h6 class="collapse-header">There is no application.</h6>
+                        <!-- <a class="collapse-item" href="utilities-color.html">Colors</a>
                         <a class="collapse-item" href="utilities-border.html">Borders</a>
                         <a class="collapse-item" href="utilities-animation.html">Animations</a>
-                        <a class="collapse-item" href="utilities-other.html">Other</a>
+                        <a class="collapse-item" href="utilities-other.html">Other</a> -->
                     </div>
                 </div>
             </li>
@@ -90,22 +92,6 @@
             <div class="sidebar-heading">
                 Build and Deploy
             </div>
-
-            <!-- Nav Item - Pages Collapse Menu -->
-            <li class="nav-item">
-                <div id="collapsePages" class="collapse" aria-labelledby="headingPages" data-parent="#accordionSidebar">
-                    <div class="bg-white py-2 collapse-inner rounded">
-                        <h6 class="collapse-header">Login Screens:</h6>
-                        <a class="collapse-item" href="login.html">Login</a>
-                        <a class="collapse-item" href="register.html">Register</a>
-                        <a class="collapse-item" href="forgot-password.html">Forgot Password</a>
-                        <div class="collapse-divider"></div>
-                        <h6 class="collapse-header">Other Pages:</h6>
-                        <a class="collapse-item" href="404.html">404 Page</a>
-                        <a class="collapse-item" href="blank.html">Blank Page</a>
-                    </div>
-                </div>
-            </li>
 
             <!-- Nav Item - GitHub -->
             <li class="nav-item">
@@ -164,6 +150,31 @@
 
                     <!-- Topbar Navbar -->
                     <ul class="navbar-nav ml-auto">
+
+                        <!-- Nav Item - Search Dropdown (Visible Only XS) -->
+                        <li class="nav-item dropdown no-arrow d-sm-none">
+                            <a class="nav-link dropdown-toggle" href="#" id="searchDropdown" role="button"
+                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-search fa-fw"></i>
+                            </a>
+                            <!-- Dropdown - Messages -->
+                            <div class="dropdown-menu dropdown-menu-right p-3 shadow animated--grow-in"
+                                aria-labelledby="searchDropdown">
+                                <form class="form-inline mr-auto w-100 navbar-search">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control bg-light border-0 small"
+                                            placeholder="Search for..." aria-label="Search"
+                                            aria-describedby="basic-addon2">
+                                        <div class="input-group-append">
+                                            <button class="btn btn-primary" type="button">
+                                                <i class="fas fa-search fa-sm"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </li>
+
                         <!-- Nav Item - Alerts -->
                         <li class="nav-item dropdown no-arrow mx-1">
                             <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button"
@@ -187,6 +198,9 @@
                                 <a class="dropdown-item text-center small text-gray-500" href="#">Show All Alerts</a>
                             </div>
                         </li>
+                        
+                        <div class="topbar-divider d-none d-sm-block"></div>
+
                         <!-- Nav Item - User Information -->
                         <li class="nav-item dropdown no-arrow">
                             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
@@ -195,8 +209,6 @@
                             </a>
                             <!-- Dropdown - User Information -->
                             <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
-                                aria-labelledby="userDropdown">
-                                <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
                                 aria-labelledby="userDropdown">
                                 <a class="dropdown-item" href="#">
                                     <i class="fas fa-cogs fa-sm fa-fw mr-2 text-gray-400"></i>
@@ -214,70 +226,25 @@
                 </nav>
                 <!-- End of Topbar -->
 
-                <!-- Begin Page Content -->
+                <!-- Create Project Page Content -->
                 <div class="container-fluid">
 
-                    <!-- Page Heading -->
-                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800">Application Name</h1>
-                        <div class="button">
-                          <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">Build Application</a>
-                          <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">Deploy Application</a>
-                          <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">Delete Application</a>
-                        </div>
+                  <div class="p-5">
+                    <div class="text-center">
+                        <h1 class="h4 text-gray-900 mb-4">Create New Project</h1>
                     </div>
-
-                    <!-- Content Row -->
-                    <div class="row">
-
-                        <div class="col-lg-6 mb-4">
-
-                            <!-- Discription -->
-                            <div class="card shadow mb-4">
-                              <div class="card-header py-3">
-                                  <h6 class="m-0 font-weight-bold text-primary">Discription</h6>
-                              </div>
-                              <div class="card-body">
-                                  <p>
-                                    This is an Application Discription
-                                  </p>
-                              </div>
-                            </div>
-
-                            <!-- Application list -->
-                            <div class="card shadow mb-4">
-                                <div class="card-header py-3">
-                                    <h6 class="m-0 font-weight-bold text-primary">File list</h6>
-                                </div>
-                                <div class="card-body">
-                                  <ul>
-                                    <li>
-                                      Dockerfile
-                                      <p>
-                                        This is a discription of Application 1.
-                                      </p>
-                                      <a target="_blank" rel="nofollow" href="https://undraw.co/">See Detail &rarr;</a>
-                                    </li>
-                                    <li>
-                                      Jenkinsfile
-                                      <p>
-                                        This is a discription of Application 1.
-                                      </p>
-                                      <a target="_blank" rel="nofollow" href="https://undraw.co/">See Detail &rarr;</a>
-                                    </li>
-                                    <li>
-                                      Kubernetes YAML ile
-                                      <p>
-                                        This is a discription of Application 1.
-                                      </p>
-                                      <a target="_blank" rel="nofollow" href="https://undraw.co/">See Detail &rarr;</a>
-                                    </li>
-                                  </ul>
-                                </div>
-                              </div>
-
+                    <form class="user">
+                        <div class="form-group">
+                            <input type="text" class="form-control form-control-user"
+                                id="newprojectname-input" placeholder="New Project Name">
                         </div>
-                    </div>
+                        <div class="create-btn">
+                          <a href="#none" class="btn btn-primary btn-user btn-block" id="createproject">
+                            Create
+                          </a>
+                        </div>
+                    </form>
+                </div>
 
                 </div>
                 <!-- /.container-fluid -->
@@ -320,7 +287,7 @@
                 <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-                    <a class="btn btn-primary" href="login.html">Logout</a>
+                    <a class="btn btn-primary" href="signin.html">Logout</a>
                 </div>
             </div>
         </div>
@@ -336,12 +303,6 @@
     <!-- Custom scripts for all pages-->
     <script src="../script/bootstrap/sb-admin-2.min.js"></script>
 
-    <!-- Page level plugins -->
-    <script src="../script/bootstrap/Chart.min.js"></script>
-
-    <!-- Page level custom scripts -->
-    <script src="../script/bootstrap/chart-area-demo.js"></script>
-    <script src="../script/bootstrap/chart-pie-demo.js"></script>
 
     <script src="../script/dashboard.js"></script>
 
