@@ -32,7 +32,7 @@ func (s *sqliteHandler) CheckIdDup(id string) bool {
 	}
 }
 
-func (s *sqliteHandler) RegisterUser(user data.RegUser, sessionId int) error {
+func (s *sqliteHandler) RegisterUser(user data.User, sessionId int) error {
 	statement, err := s.db.Prepare("INSERT INTO users (id, password, email, sessionId) VALUES (?, ?, ?, ?)")
 	if err != nil {
 		panic(err)
@@ -90,6 +90,20 @@ func (s *sqliteHandler) CreateProject(project data.NewProject, sessionId int) er
 	}
 	_, err = statement.Exec(project.Name, sessionId)
 	return err
+}
+
+func (s *sqliteHandler) UserInfo(sessionId int) (data.User, error) {
+	var user data.User
+	row, err := s.db.Query("SELECT * FROM users WHERE sessionId=?", sessionId)
+	if err != nil {
+		return user, err
+	}
+	defer row.Close()
+
+	row.Next()
+	row.Scan(&user.Id, &user.Password, &user.Email)
+
+	return user, nil
 }
 
 func newSqliteHandler(filepath string) DBHandler {

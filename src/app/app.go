@@ -102,7 +102,7 @@ func (a *AppHandler) DupCheckHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AppHandler) UserRegisterHandler(rw http.ResponseWriter, r *http.Request) {
-	var user data.RegUser
+	var user data.User
 	sessionId := getSessionID(r)
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&user)
@@ -130,6 +130,16 @@ func (a *AppHandler) CreateProjectHandler(rw http.ResponseWriter, r *http.Reques
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 	}
 	rd.JSON(rw, http.StatusOK, Success{true})
+}
+
+func (a *AppHandler) UserInfoHandler(rw http.ResponseWriter, r *http.Request) {
+	var user data.User
+	sessionId := getSessionID(r)
+	user, err := a.db.UserInfo(sessionId)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+	}
+	rd.JSON(rw, http.StatusOK, user)
 }
 
 func CheckSignin(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
@@ -167,6 +177,7 @@ func MakeHandler(filepath string) *AppHandler {
 	r.HandleFunc("/signup/idcheck/{id:[a-zA-Z0-9]+}", a.DupCheckHandler).Methods("GET")
 	r.HandleFunc("/signup/register", a.UserRegisterHandler).Methods("POST")
 
+	r.HandleFunc("/user", a.UserInfoHandler).Methods("GET")
 	r.HandleFunc("/project", a.CreateProjectHandler).Methods("POST")
 
 	// r.HandleFunc("/repos", a.Repository).Methods("GET")

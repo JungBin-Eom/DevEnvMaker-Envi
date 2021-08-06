@@ -19,3 +19,9 @@ $("#createproject").click(function(){
     }
   });
 });
+
+$("#user-id").click(function(){
+  $.get("/user", function(user) {
+    $("#user-id").html(user.id)
+  });
+})
