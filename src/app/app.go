@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -133,12 +134,12 @@ func (a *AppHandler) CreateProjectHandler(rw http.ResponseWriter, r *http.Reques
 }
 
 func (a *AppHandler) UserInfoHandler(rw http.ResponseWriter, r *http.Request) {
-	var user data.User
 	sessionId := getSessionID(r)
 	user, err := a.db.UserInfo(sessionId)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 	}
+	fmt.Println(user)
 	rd.JSON(rw, http.StatusOK, user)
 }
 

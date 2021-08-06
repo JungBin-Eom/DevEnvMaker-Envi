@@ -2,6 +2,7 @@ package model
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/JungBin-Eom/DevEnvMaker-Envi/data"
 	_ "github.com/mattn/go-sqlite3"
@@ -92,18 +93,18 @@ func (s *sqliteHandler) CreateProject(project data.NewProject, sessionId int) er
 	return err
 }
 
-func (s *sqliteHandler) UserInfo(sessionId int) (data.User, error) {
+func (s *sqliteHandler) UserInfo(sessionId int) (*data.User, error) {
 	var user data.User
-	row, err := s.db.Query("SELECT * FROM users WHERE sessionId=?", sessionId)
+	row, err := s.db.Query("SELECT id, password, email FROM users WHERE sessionId=?", sessionId)
 	if err != nil {
-		return user, err
+		return &user, err
 	}
 	defer row.Close()
 
 	row.Next()
 	row.Scan(&user.Id, &user.Password, &user.Email)
-
-	return user, nil
+	fmt.Println(user)
+	return &user, nil
 }
 
 func newSqliteHandler(filepath string) DBHandler {

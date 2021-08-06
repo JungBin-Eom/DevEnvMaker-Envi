@@ -9,7 +9,7 @@ type DBHandler interface {
 	IsUser(int) bool
 	AuthUser(data.Login) (bool, int)
 	CreateProject(data.NewProject, int) error
-	UserInfo(int) (data.User, error)
+	UserInfo(int) (*data.User, error)
 }
 
 func NewDBHandler(filepath string) DBHandler {
