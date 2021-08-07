@@ -12,7 +12,8 @@ type Login struct {
 }
 
 type Project struct {
-	Name string `json:"name"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
 type Application struct {

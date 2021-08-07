@@ -1,3 +1,8 @@
+$.get("/user", function(user) {
+  $("#user-id").html(user.id)
+});
+
+
 $("#createproject").click(function(){
   fetch('/project', {
     method: 'post',
@@ -6,6 +11,7 @@ $("#createproject").click(function(){
     },
     body: JSON.stringify({
         name: $('#newprojectname-input').val(),
+        description: $('#newprojectdesc-input').val(),
       })
   })
   .then(res => res.json())
@@ -20,21 +26,26 @@ $("#createproject").click(function(){
   });
 });
 
-$.get("/user", function(user) {
-  console.log(user)
-  $("#user-id").html(user.id)
-});
-
 var projectList = $("#project-list")
 var appList = $("#app-list")
 
 var addProject = function(item) {
-  projectList.append("<a class='collapse-item' href='#'>"+item.name+"</a>");
+  projectList.append("<a class='collapse-item project' id='"+item.name+"' href='../html/project.html'>"+item.name+"</a>");
 };
 
 var addApp = function(item) {
-  appList.append("<a class='collapse-item' href='#'>"+item.name+"</a>");
+  appList.append("<a class='collapse-item project' id='"+item.name+"' href='../html/application.html'>"+item.name+"</a>");
 };
+
+var projectName="ricky";
+$("#project-name").text(projectName);
+
+$("#hello").on("click", function(){
+  // projectName = $(this).attr("id");
+  // console.log(projectName);
+  // $("h1").text(projectName);
+  alert("clicked");
+})
 
 $.get("/project", function(items) {
   if (items.length == 0) {
@@ -54,4 +65,28 @@ $.get("/app", function(items) {
         addItem(e)
     });
   }
+});
+
+$("#delete-project-btn").click(function(){
+  var projectName = $("h1").text();
+  fetch('/project', {
+    method: 'delete',
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+        name: projectName,
+      })
+  })
+  .then(res => res.json())
+  .then(res => {
+    console.log(res)
+    if (res.success == true) {
+      $("#"+projectName).remove();
+      alert("프로젝트 삭제 완료!")
+      location.href="/"
+    } else {
+      alert("삭제 중 문제가 발생했습니다.")
+    }
+  });
 });

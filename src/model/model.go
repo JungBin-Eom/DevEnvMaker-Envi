@@ -11,6 +11,7 @@ type DBHandler interface {
 	UserInfo(int) (*data.User, error)
 
 	CreateProject(data.Project, int) error
+	RemoveProject(data.Project, int) bool
 	GetProjects(int) []*data.Project
 
 	GetApps(int) []*data.Application

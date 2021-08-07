@@ -155,6 +155,22 @@ func (a *AppHandler) GetAppsHandler(rw http.ResponseWriter, r *http.Request) {
 	rd.JSON(rw, http.StatusOK, list)
 }
 
+func (a *AppHandler) RemoveProjectHandler(rw http.ResponseWriter, r *http.Request) {
+	var project data.Project
+	sessionId := getSessionID(r)
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&project)
+	if err != nil {
+		http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
+	}
+	ok := a.db.RemoveProject(project, sessionId)
+	if ok {
+		rd.JSON(rw, http.StatusOK, Success{true})
+	} else {
+		rd.JSON(rw, http.StatusOK, Success{false})
+	}
+}
+
 func CheckSignin(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	if strings.Contains(r.URL.Path, "/sign") || strings.Contains(r.URL.Path, "/auth") {
 		next(rw, r)
@@ -193,6 +209,7 @@ func MakeHandler(filepath string) *AppHandler {
 	r.HandleFunc("/user", a.UserInfoHandler).Methods("GET")
 
 	r.HandleFunc("/project", a.GetProjectsHandler).Methods("GET")
+	r.HandleFunc("/project", a.RemoveProjectHandler).Methods("DELETE")
 	r.HandleFunc("/project", a.CreateProjectHandler).Methods("POST")
 
 	r.HandleFunc("/app", a.GetAppsHandler).Methods("GET")

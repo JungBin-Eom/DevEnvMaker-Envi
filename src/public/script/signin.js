@@ -11,7 +11,6 @@ $('.btn-submit').click(function(){
   })
   .then(res => res.json())
   .then(res => {
-    console.log(res)
     if (res.success == true) {
       location.href="/"
     } else {

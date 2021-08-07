@@ -2,7 +2,6 @@ package model
 
 import (
 	"database/sql"
-	"fmt"
 
 	"github.com/JungBin-Eom/DevEnvMaker-Envi/data"
 	_ "github.com/mattn/go-sqlite3"
@@ -85,11 +84,11 @@ func (s *sqliteHandler) AuthUser(user data.Login) (bool, int) {
 }
 
 func (s *sqliteHandler) CreateProject(project data.Project, sessionId int) error {
-	statement, err := s.db.Prepare("INSERT INTO projects (name, owner) VALUES (?, ?)")
+	statement, err := s.db.Prepare("INSERT INTO projects (name, owner, description) VALUES (?, ?, ?)")
 	if err != nil {
 		panic(err)
 	}
-	_, err = statement.Exec(project.Name, sessionId)
+	_, err = statement.Exec(project.Name, sessionId, project.Description)
 	return err
 }
 
@@ -103,7 +102,6 @@ func (s *sqliteHandler) UserInfo(sessionId int) (*data.User, error) {
 
 	row.Next()
 	row.Scan(&user.Id, &user.Password, &user.Email)
-	fmt.Println(user)
 	return &user, nil
 }
 
@@ -137,6 +135,38 @@ func (s *sqliteHandler) GetApps(sessionId int) []*data.Application {
 	return apps
 }
 
+func (s *sqliteHandler) RemoveProject(project data.Project, sessionId int) bool {
+	row, err := s.db.Query("SELECT id FROM projects WHERE name=? AND owner=?", project.Name, sessionId)
+	if err != nil {
+		panic(err)
+	}
+	row.Next()
+	var id int
+	row.Scan(&id)
+	row.Close()
+
+	prjStatement, err := s.db.Prepare("DELETE FROM projects WHERE name=? AND owner=?")
+	if err != nil {
+		panic(err)
+	}
+	prjResult, err := prjStatement.Exec(project.Name, sessionId)
+	if err != nil {
+		panic(err)
+	}
+
+	appStatement, err := s.db.Prepare("DELETE FROM applications WHERE project=? AND owner=?")
+	if err != nil {
+		panic(err)
+	}
+	_, err = appStatement.Exec(id, sessionId)
+	if err != nil {
+		panic(err)
+	}
+
+	cnt, _ := prjResult.RowsAffected()
+	return cnt > 0
+}
+
 func newSqliteHandler(filepath string) DBHandler {
 	database, err := sql.Open("sqlite3", filepath)
 	if err != nil {
@@ -154,6 +184,7 @@ func newSqliteHandler(filepath string) DBHandler {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name STRING,
 			owner INTEGER,
+			description STRING,
 			FOREIGN KEY(owner) REFERENCES users(sessionId)
 		);`)
 	createApplication, _ := database.Prepare(
@@ -162,6 +193,7 @@ func newSqliteHandler(filepath string) DBHandler {
 			name STRING,
 			owner INTEGER,
 			project STRING,
+			description STRING,
 			FOREIGN KEY(owner) REFERENCES users(sessionId),
 			FOREIGN KEY(project) REFERENCES projects(id)
 		);`)
