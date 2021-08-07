@@ -25,7 +25,6 @@ $.get("/user", function(user) {
   $("#user-id").html(user.id)
 });
 
-
 var projectList = $("#project-list")
 var appList = $("#app-list")
 
