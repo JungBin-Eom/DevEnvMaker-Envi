@@ -2,7 +2,6 @@ package app
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -71,7 +70,8 @@ func (a *AppHandler) LoginHandler(rw http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&user)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+		http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
+		// http.Error(rw, err.Error(), http.StatusBadRequest)
 	}
 	login, sessionId := a.db.AuthUser(user)
 	if login == true {
@@ -108,7 +108,8 @@ func (a *AppHandler) UserRegisterHandler(rw http.ResponseWriter, r *http.Request
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&user)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+		http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
+		// http.Error(rw, err.Error(), http.StatusBadRequest)
 	}
 	err = a.db.RegisterUser(user, sessionId)
 	if err != nil {
@@ -123,8 +124,8 @@ func (a *AppHandler) CreateProjectHandler(rw http.ResponseWriter, r *http.Reques
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&newprj)
 	if err != nil {
-		// http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+		http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
+		// http.Error(rw, err.Error(), http.StatusBadRequest)
 	}
 	err = a.db.CreateProject(newprj, sessionId)
 	if err != nil {
@@ -139,7 +140,6 @@ func (a *AppHandler) UserInfoHandler(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 	}
-	fmt.Println(user)
 	rd.JSON(rw, http.StatusOK, user)
 }
 
