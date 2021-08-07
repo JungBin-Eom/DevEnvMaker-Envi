@@ -84,8 +84,8 @@ func (s *sqliteHandler) AuthUser(user data.Login) (bool, int) {
 	}
 }
 
-func (s *sqliteHandler) CreateProject(project data.NewProject, sessionId int) error {
-	statement, err := s.db.Prepare("INSERT INTO project (name, owner) VALUES (?, ?)")
+func (s *sqliteHandler) CreateProject(project data.Project, sessionId int) error {
+	statement, err := s.db.Prepare("INSERT INTO projects (name, owner) VALUES (?, ?)")
 	if err != nil {
 		panic(err)
 	}
@@ -107,6 +107,36 @@ func (s *sqliteHandler) UserInfo(sessionId int) (*data.User, error) {
 	return &user, nil
 }
 
+func (s *sqliteHandler) GetProjects(sessionId int) []*data.Project {
+	projects := []*data.Project{}
+	rows, err := s.db.Query("SELECT name FROM projects WHERE owner=?", sessionId)
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var project data.Project
+		rows.Scan(&project.Name)
+		projects = append(projects, &project)
+	}
+	return projects
+}
+
+func (s *sqliteHandler) GetApps(sessionId int) []*data.Application {
+	apps := []*data.Application{}
+	rows, err := s.db.Query("SELECT name FROM applications WHERE owner=?", sessionId)
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var app data.Application
+		rows.Scan(&app.Name)
+		apps = append(apps, &app)
+	}
+	return apps
+}
+
 func newSqliteHandler(filepath string) DBHandler {
 	database, err := sql.Open("sqlite3", filepath)
 	if err != nil {
@@ -120,20 +150,20 @@ func newSqliteHandler(filepath string) DBHandler {
 			sessionId INTEGER
 		);`)
 	createProject, _ := database.Prepare(
-		`CREATE TABLE IF NOT EXISTS project (
+		`CREATE TABLE IF NOT EXISTS projects (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name STRING,
 			owner INTEGER,
 			FOREIGN KEY(owner) REFERENCES users(sessionId)
 		);`)
 	createApplication, _ := database.Prepare(
-		`CREATE TABLE IF NOT EXISTS application (
+		`CREATE TABLE IF NOT EXISTS applications (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name STRING,
 			owner INTEGER,
 			project STRING,
 			FOREIGN KEY(owner) REFERENCES users(sessionId),
-			FOREIGN KEY(project) REFERENCES project(id)
+			FOREIGN KEY(project) REFERENCES projects(id)
 		);`)
 	createUser.Exec()
 	createProject.Exec()

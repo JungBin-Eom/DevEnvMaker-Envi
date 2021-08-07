@@ -20,8 +20,39 @@ $("#createproject").click(function(){
   });
 });
 
-
 $.get("/user", function(user) {
   console.log(user)
   $("#user-id").html(user.id)
+});
+
+
+var projectList = $("#project-list")
+var appList = $("#app-list")
+
+var addProject = function(item) {
+  projectList.append("<a class='collapse-item' href='#'>"+item.name+"</a>");
+};
+
+var addApp = function(item) {
+  appList.append("<a class='collapse-item' href='#'>"+item.name+"</a>");
+};
+
+$.get("/project", function(items) {
+  if (items.length == 0) {
+    projectList.append("<h6 class='collapse-header'>There is no project.</h6>");
+  } else {
+    items.forEach(e => {
+      addProject(e)
+    });
+  }
+});
+
+$.get("/app", function(items) {
+  if (items.length == 0) {
+    appList.append("<h6 class='collapse-header'>There is no application.</h6>");
+  } else {
+    items.forEach(e => {
+        addItem(e)
+    });
+  }
 });

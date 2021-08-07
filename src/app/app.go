@@ -118,7 +118,7 @@ func (a *AppHandler) UserRegisterHandler(rw http.ResponseWriter, r *http.Request
 }
 
 func (a *AppHandler) CreateProjectHandler(rw http.ResponseWriter, r *http.Request) {
-	var newprj data.NewProject
+	var newprj data.Project
 	sessionId := getSessionID(r)
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&newprj)
@@ -141,6 +141,18 @@ func (a *AppHandler) UserInfoHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println(user)
 	rd.JSON(rw, http.StatusOK, user)
+}
+
+func (a *AppHandler) GetProjectsHandler(rw http.ResponseWriter, r *http.Request) {
+	sessionId := getSessionID(r)
+	list := a.db.GetProjects(sessionId)
+	rd.JSON(rw, http.StatusOK, list)
+}
+
+func (a *AppHandler) GetAppsHandler(rw http.ResponseWriter, r *http.Request) {
+	sessionId := getSessionID(r)
+	list := a.db.GetApps(sessionId)
+	rd.JSON(rw, http.StatusOK, list)
 }
 
 func CheckSignin(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
@@ -179,7 +191,11 @@ func MakeHandler(filepath string) *AppHandler {
 	r.HandleFunc("/signup/register", a.UserRegisterHandler).Methods("POST")
 
 	r.HandleFunc("/user", a.UserInfoHandler).Methods("GET")
+
+	r.HandleFunc("/project", a.GetProjectsHandler).Methods("GET")
 	r.HandleFunc("/project", a.CreateProjectHandler).Methods("POST")
+
+	r.HandleFunc("/app", a.GetAppsHandler).Methods("GET")
 
 	// r.HandleFunc("/repos", a.Repository).Methods("GET")
 	r.HandleFunc("/auth/github/login", a.GithubLoginHandler)

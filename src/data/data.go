@@ -11,6 +11,10 @@ type Login struct {
 	Password string `json:"password"`
 }
 
-type NewProject struct {
+type Project struct {
+	Name string `json:"name"`
+}
+
+type Application struct {
 	Name string `json:"name"`
 }
