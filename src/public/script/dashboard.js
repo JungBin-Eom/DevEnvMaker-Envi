@@ -30,22 +30,25 @@ var projectList = $("#project-list")
 var appList = $("#app-list")
 
 var addProject = function(item) {
-  projectList.append("<a class='collapse-item project' id='"+item.name+"' href='../html/project.html'>"+item.name+"</a>");
+  projectList.append("<a class='collapse-item project' id='"+item.name+"' href='#none'>"+item.name+"</a>");
 };
 
 var addApp = function(item) {
-  appList.append("<a class='collapse-item project' id='"+item.name+"' href='../html/application.html'>"+item.name+"</a>");
+  appList.append("<a class='collapse-item application' id='"+item.name+"' href='#none'>"+item.name+"</a>");
 };
+
+$("#test").click(function(){
+  projectName = $(this).attr("id");
+  console.log(projectName);
+  $("#project-name").text(projectName);
+  console.log("clicked");
+  alert("clicked");
+  location.href="../html/project.html"
+});
+
 
 var projectName="ricky";
 $("#project-name").text(projectName);
-
-$("#hello").on("click", function(){
-  // projectName = $(this).attr("id");
-  // console.log(projectName);
-  // $("h1").text(projectName);
-  alert("clicked");
-})
 
 $.get("/project", function(items) {
   if (items.length == 0) {
