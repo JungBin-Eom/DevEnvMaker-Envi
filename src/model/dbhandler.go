@@ -83,15 +83,6 @@ func (s *sqliteHandler) AuthUser(user data.Login) (bool, int) {
 	}
 }
 
-func (s *sqliteHandler) CreateProject(project data.Project, sessionId int) error {
-	statement, err := s.db.Prepare("INSERT INTO projects (name, owner, description) VALUES (?, ?, ?)")
-	if err != nil {
-		panic(err)
-	}
-	_, err = statement.Exec(project.Name, sessionId, project.Description)
-	return err
-}
-
 func (s *sqliteHandler) UserInfo(sessionId int) (*data.User, error) {
 	var user data.User
 	row, err := s.db.Query("SELECT id, password, email FROM users WHERE sessionId=?", sessionId)
@@ -105,7 +96,29 @@ func (s *sqliteHandler) UserInfo(sessionId int) (*data.User, error) {
 	return &user, nil
 }
 
-func (s *sqliteHandler) GetProjects(sessionId int) []*data.Project {
+func (s *sqliteHandler) GetProject(name string, sessionId int) (*data.Project, error) {
+	var project data.Project
+	row, err := s.db.Query("SELECT name, description FROM projects WHERE name=? AND owner=?", name, sessionId)
+	if err != nil {
+		return &project, err
+	}
+	defer row.Close()
+
+	row.Next()
+	row.Scan(&project.Name, &project.Description)
+	return &project, nil
+}
+
+func (s *sqliteHandler) CreateProject(project data.Project, sessionId int) error {
+	statement, err := s.db.Prepare("INSERT INTO projects (name, owner, description) VALUES (?, ?, ?)")
+	if err != nil {
+		panic(err)
+	}
+	_, err = statement.Exec(project.Name, sessionId, project.Description)
+	return err
+}
+
+func (s *sqliteHandler) GetProjectList(sessionId int) []*data.Project {
 	projects := []*data.Project{}
 	rows, err := s.db.Query("SELECT name FROM projects WHERE owner=?", sessionId)
 	if err != nil {
@@ -120,7 +133,7 @@ func (s *sqliteHandler) GetProjects(sessionId int) []*data.Project {
 	return projects
 }
 
-func (s *sqliteHandler) GetApps(sessionId int) []*data.Application {
+func (s *sqliteHandler) GetAppList(sessionId int) []*data.Application {
 	apps := []*data.Application{}
 	rows, err := s.db.Query("SELECT name FROM applications WHERE owner=?", sessionId)
 	if err != nil {

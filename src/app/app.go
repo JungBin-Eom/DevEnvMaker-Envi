@@ -145,13 +145,13 @@ func (a *AppHandler) UserInfoHandler(rw http.ResponseWriter, r *http.Request) {
 
 func (a *AppHandler) GetProjectsHandler(rw http.ResponseWriter, r *http.Request) {
 	sessionId := getSessionID(r)
-	list := a.db.GetProjects(sessionId)
+	list := a.db.GetProjectList(sessionId)
 	rd.JSON(rw, http.StatusOK, list)
 }
 
 func (a *AppHandler) GetAppsHandler(rw http.ResponseWriter, r *http.Request) {
 	sessionId := getSessionID(r)
-	list := a.db.GetApps(sessionId)
+	list := a.db.GetAppList(sessionId)
 	rd.JSON(rw, http.StatusOK, list)
 }
 
@@ -169,6 +169,17 @@ func (a *AppHandler) RemoveProjectHandler(rw http.ResponseWriter, r *http.Reques
 	} else {
 		rd.JSON(rw, http.StatusOK, Success{false})
 	}
+}
+
+func (a *AppHandler) GetProjectDetailHandler(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	name, _ := vars["name"]
+	sessionId := getSessionID(r)
+	project, err := a.db.GetProject(name, sessionId)
+	if err != nil {
+		http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
+	}
+	rd.JSON(rw, http.StatusOK, project)
 }
 
 func CheckSignin(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
@@ -211,6 +222,7 @@ func MakeHandler(filepath string) *AppHandler {
 	r.HandleFunc("/project", a.GetProjectsHandler).Methods("GET")
 	r.HandleFunc("/project", a.RemoveProjectHandler).Methods("DELETE")
 	r.HandleFunc("/project", a.CreateProjectHandler).Methods("POST")
+	r.HandleFunc("/project/{name:[a-zA-Z0-9]+}", a.GetProjectDetailHandler).Methods("GET")
 
 	r.HandleFunc("/app", a.GetAppsHandler).Methods("GET")
 

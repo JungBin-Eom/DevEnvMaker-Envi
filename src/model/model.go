@@ -10,11 +10,12 @@ type DBHandler interface {
 	AuthUser(data.Login) (bool, int)
 	UserInfo(int) (*data.User, error)
 
+	GetProject(string, int) (*data.Project, error)
 	CreateProject(data.Project, int) error
 	RemoveProject(data.Project, int) bool
-	GetProjects(int) []*data.Project
+	GetProjectList(int) []*data.Project
 
-	GetApps(int) []*data.Application
+	GetAppList(int) []*data.Application
 }
 
 func NewDBHandler(filepath string) DBHandler {
