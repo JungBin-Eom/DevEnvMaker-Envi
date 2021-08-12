@@ -32,12 +32,12 @@ func (s *sqliteHandler) CheckIdDup(id string) bool {
 	}
 }
 
-func (s *sqliteHandler) RegisterUser(user data.User, sessionId int) error {
-	statement, err := s.db.Prepare("INSERT INTO users (id, password, email, sessionId) VALUES (?, ?, ?, ?)")
+func (s *sqliteHandler) RegisterUser(user data.User, sessionId int, githubName string) error {
+	statement, err := s.db.Prepare("INSERT INTO users (id, password, email, sessionId, githubName) VALUES (?, ?, ?, ?, ?)")
 	if err != nil {
 		panic(err)
 	}
-	_, err = statement.Exec(user.Id, user.Password, user.Email, sessionId)
+	_, err = statement.Exec(user.Id, user.Password, user.Email, sessionId, githubName)
 	return err
 }
 
@@ -58,7 +58,7 @@ func (s *sqliteHandler) IsUser(sessionId int) bool {
 	}
 }
 
-func (s *sqliteHandler) AuthUser(user data.Login) (bool, int) {
+func (s *sqliteHandler) AuthUser(user data.Login) (bool, int, string) {
 	row, err := s.db.Query("SELECT COUNT(*) FROM users WHERE id=? AND password=?", user.Id, user.Password)
 	if err != nil {
 		panic(err)
@@ -69,17 +69,18 @@ func (s *sqliteHandler) AuthUser(user data.Login) (bool, int) {
 	var count int
 	row.Scan(&count)
 	if count == 0 {
-		return false, 0
+		return false, 0, ""
 	} else {
-		session, err := s.db.Query("SELECT sessionId FROM users WHERE id=?", user.Id)
+		session, err := s.db.Query("SELECT sessionId, githubName FROM users WHERE id=?", user.Id)
 		if err != nil {
 			panic(err)
 		}
 		defer session.Close()
 		session.Next()
 		var sessionId int
-		session.Scan(&sessionId)
-		return true, sessionId
+		var githubName string
+		session.Scan(&sessionId, &githubName)
+		return true, sessionId, githubName
 	}
 }
 
@@ -190,7 +191,8 @@ func newSqliteHandler(filepath string) DBHandler {
 			id	STRING PRIMARY KEY,
 			password STRING,
 			email STRING,
-			sessionId INTEGER
+			sessionId INTEGER,
+			githubName STRING
 		);`)
 	createProject, _ := database.Prepare(
 		`CREATE TABLE IF NOT EXISTS projects (

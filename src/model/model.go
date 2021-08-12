@@ -5,9 +5,9 @@ import "github.com/JungBin-Eom/DevEnvMaker-Envi/data"
 type DBHandler interface {
 	Close()
 	CheckIdDup(string) bool
-	RegisterUser(data.User, int) error
+	RegisterUser(data.User, int, string) error
 	IsUser(int) bool
-	AuthUser(data.Login) (bool, int)
+	AuthUser(data.Login) (bool, int, string)
 	UserInfo(int) (*data.User, error)
 
 	GetProject(string, int) (*data.Project, error)

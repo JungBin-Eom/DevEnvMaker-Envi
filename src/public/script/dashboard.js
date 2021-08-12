@@ -110,3 +110,17 @@ if (parameters.name != undefined) {
     $("#project-description").text(project.description);
   });
 }
+
+// github link 클릭
+$("#github-link").click(function(){
+  fetch('/github/name', {
+    method: 'get',
+    headers: {
+      "Content-Type": "application/json",
+    }
+  })
+  .then(res => res.text())
+  .then(res => {
+    location.href="https://github.com/"+res
+  });
+});

@@ -73,7 +73,7 @@ func (a *AppHandler) LoginHandler(rw http.ResponseWriter, r *http.Request) {
 		http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
 		// http.Error(rw, err.Error(), http.StatusBadRequest)
 	}
-	login, sessionId := a.db.AuthUser(user)
+	login, sessionId, githubName := a.db.AuthUser(user)
 	if login == true {
 		session, err := store.Get(r, "session")
 		if err != nil {
@@ -81,6 +81,7 @@ func (a *AppHandler) LoginHandler(rw http.ResponseWriter, r *http.Request) {
 		}
 
 		session.Values["id"] = int64(sessionId)
+		session.Values["login"] = githubName
 		err = session.Save(r, rw)
 		if err != nil {
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
@@ -105,13 +106,14 @@ func (a *AppHandler) DupCheckHandler(rw http.ResponseWriter, r *http.Request) {
 func (a *AppHandler) UserRegisterHandler(rw http.ResponseWriter, r *http.Request) {
 	var user data.User
 	sessionId := getSessionID(r)
+	githubName := getSessionName(r)
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&user)
 	if err != nil {
 		http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
 		// http.Error(rw, err.Error(), http.StatusBadRequest)
 	}
-	err = a.db.RegisterUser(user, sessionId)
+	err = a.db.RegisterUser(user, sessionId, githubName)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 	}
@@ -182,6 +184,11 @@ func (a *AppHandler) GetProjectDetailHandler(rw http.ResponseWriter, r *http.Req
 	rd.JSON(rw, http.StatusOK, project)
 }
 
+func (a *AppHandler) GetGitHubNameHandler(rw http.ResponseWriter, r *http.Request) {
+	githubName := getSessionName(r)
+	rd.Text(rw, http.StatusOK, githubName)
+}
+
 func CheckSignin(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	if strings.Contains(r.URL.Path, "/sign") || strings.Contains(r.URL.Path, "/auth") {
 		next(rw, r)
@@ -227,6 +234,9 @@ func MakeHandler(filepath string) *AppHandler {
 	r.HandleFunc("/app", a.GetAppsHandler).Methods("GET")
 
 	// r.HandleFunc("/repos", a.Repository).Methods("GET")
+
+	r.HandleFunc("/github/name", a.GetGitHubNameHandler).Methods("GET")
+
 	r.HandleFunc("/auth/github/login", a.GithubLoginHandler)
 	r.HandleFunc("/auth/github/callback", a.GithubAuthCallback)
 
