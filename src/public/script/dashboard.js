@@ -23,7 +23,7 @@ $("#createproject").click(function(){
       alert("프로젝트 생성 완료!")
       location.href="/"
     } else {
-      alert("입력한 정보가 정확하지 않습니다.")
+      location.href="/html/404.html"
     }
   });
 });
@@ -71,7 +71,7 @@ $("#register-token").click(function(){
       alert("토큰 등록 완료!")
       location.href="/"
     } else {
-      alert("입력한 정보가 정확하지 않습니다.")
+      location.href="/html/404.html"
     }
   });
 });

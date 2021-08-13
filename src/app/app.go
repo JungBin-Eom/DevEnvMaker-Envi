@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -125,18 +126,45 @@ func (a *AppHandler) UserRegisterHandler(rw http.ResponseWriter, r *http.Request
 func (a *AppHandler) CreateProjectHandler(rw http.ResponseWriter, r *http.Request) {
 	var newprj data.Project
 	sessionId := getSessionID(r)
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&newprj)
-	if err != nil {
-		http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
-		// http.Error(rw, err.Error(), http.StatusBadRequest)
-	}
-	err = a.db.CreateProject(newprj, sessionId)
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-	}
+	user, _ := a.db.UserInfo(sessionId)
+	if user.GithubToken == "NULL" {
+		rd.JSON(rw, http.StatusOK, Success{false})
+	} else {
+		decoder := json.NewDecoder(r.Body)
+		err := decoder.Decode(&newprj)
+		if err != nil {
+			rd.JSON(rw, http.StatusOK, Success{false})
+		}
 
-	rd.JSON(rw, http.StatusOK, Success{true})
+		err = a.db.CreateProject(newprj, sessionId)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+		}
+
+		pbytes, _ := json.Marshal(newprj)
+		buff := bytes.NewBuffer(pbytes)
+
+		req, err := http.NewRequest("POST", "https://api.github.com/user/repos", buff)
+		if err != nil {
+			rd.JSON(rw, http.StatusOK, Success{false})
+		}
+		req.Header.Set("content-type", "application/json")
+		req.Header.Set("authorization", "token "+user.GithubToken)
+		req.Header.Set("user-agent", user.GithubName)
+		fmt.Println(req)
+
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			rd.JSON(rw, http.StatusOK, Success{false})
+		}
+		defer res.Body.Close()
+		// _, err := ioutil.ReadAll(res.Body)
+		// if err != nil {
+		// 	http.Error(rw, "Unable to read body", http.StatusBadRequest)
+		// }
+
+		rd.JSON(rw, http.StatusOK, Success{true})
+	}
 }
 
 func (a *AppHandler) UserInfoHandler(rw http.ResponseWriter, r *http.Request) {
