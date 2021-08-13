@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -113,7 +114,8 @@ func (a *AppHandler) UserRegisterHandler(rw http.ResponseWriter, r *http.Request
 		http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
 		// http.Error(rw, err.Error(), http.StatusBadRequest)
 	}
-	err = a.db.RegisterUser(user, sessionId, githubName)
+	user.GithubName = githubName
+	err = a.db.RegisterUser(user, sessionId)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 	}
@@ -133,6 +135,7 @@ func (a *AppHandler) CreateProjectHandler(rw http.ResponseWriter, r *http.Reques
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 	}
+
 	rd.JSON(rw, http.StatusOK, Success{true})
 }
 
@@ -189,6 +192,25 @@ func (a *AppHandler) GetGitHubNameHandler(rw http.ResponseWriter, r *http.Reques
 	rd.Text(rw, http.StatusOK, githubName)
 }
 
+func (a *AppHandler) RegisterTokenHandler(rw http.ResponseWriter, r *http.Request) {
+	sessionId := getSessionID(r)
+	type Token struct {
+		Token string `json:"token"`
+	}
+	var token Token
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&token)
+	if err != nil {
+		http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
+	}
+	fmt.Println(token)
+	err = a.db.RegisterToken(sessionId, token.Token)
+	if err != nil {
+		http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
+	}
+	rd.JSON(rw, http.StatusOK, Success{Success: true})
+}
+
 func CheckSignin(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	if strings.Contains(r.URL.Path, "/sign") || strings.Contains(r.URL.Path, "/auth") {
 		next(rw, r)
@@ -225,6 +247,7 @@ func MakeHandler(filepath string) *AppHandler {
 	r.HandleFunc("/signup/register", a.UserRegisterHandler).Methods("POST")
 
 	r.HandleFunc("/user", a.UserInfoHandler).Methods("GET")
+	r.HandleFunc("/user/token", a.RegisterTokenHandler).Methods("POST")
 
 	r.HandleFunc("/project", a.GetProjectsHandler).Methods("GET")
 	r.HandleFunc("/project", a.RemoveProjectHandler).Methods("DELETE")

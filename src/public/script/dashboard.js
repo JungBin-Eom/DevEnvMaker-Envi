@@ -1,6 +1,7 @@
 // 오른쪽 상단 사용자 이름 표시
 $.get("/user", function(user) {
   $("#user-id").html(user.id)
+  $("#now-token").html(user.github_token)
 });
 
 // 프로젝트 생성 버튼 클릭
@@ -48,6 +49,29 @@ $("#delete-project-btn").click(function(){
       location.href="/"
     } else {
       alert("삭제 중 문제가 발생했습니다.")
+    }
+  });
+});
+
+// 토큰 등록 버튼 클릭
+$("#register-token").click(function(){
+  fetch('/user/token', {
+    method: 'post',
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+        token: $('#token-input').val(),
+      })
+  })
+  .then(res => res.json())
+  .then(res => {
+    console.log(res)
+    if (res.success == true) {
+      alert("토큰 등록 완료!")
+      location.href="/"
+    } else {
+      alert("입력한 정보가 정확하지 않습니다.")
     }
   });
 });

@@ -1,9 +1,11 @@
 package data
 
 type User struct {
-	Id       string `json:"id"`
-	Password string `json:"password"`
-	Email    string `json:"email"`
+	Id          string `json:"id"`
+	Password    string `json:"password"`
+	Email       string `json:"email"`
+	GithubName  string `json:"github_name"`
+	GithubToken string `json:"github_token"`
 }
 
 type Login struct {

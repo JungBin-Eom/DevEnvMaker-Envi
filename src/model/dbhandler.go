@@ -32,12 +32,12 @@ func (s *sqliteHandler) CheckIdDup(id string) bool {
 	}
 }
 
-func (s *sqliteHandler) RegisterUser(user data.User, sessionId int, githubName string) error {
-	statement, err := s.db.Prepare("INSERT INTO users (id, password, email, sessionId, githubName) VALUES (?, ?, ?, ?, ?)")
+func (s *sqliteHandler) RegisterUser(user data.User, sessionId int) error {
+	statement, err := s.db.Prepare("INSERT INTO users (id, password, email, sessionId, githubName, githubToken) VALUES (?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		panic(err)
 	}
-	_, err = statement.Exec(user.Id, user.Password, user.Email, sessionId, githubName)
+	_, err = statement.Exec(user.Id, user.Password, user.Email, sessionId, user.GithubName, "NULL")
 	return err
 }
 
@@ -86,14 +86,14 @@ func (s *sqliteHandler) AuthUser(user data.Login) (bool, int, string) {
 
 func (s *sqliteHandler) UserInfo(sessionId int) (*data.User, error) {
 	var user data.User
-	row, err := s.db.Query("SELECT id, password, email FROM users WHERE sessionId=?", sessionId)
+	row, err := s.db.Query("SELECT id, password, email, githubName, githubToken FROM users WHERE sessionId=?", sessionId)
 	if err != nil {
 		return &user, err
 	}
 	defer row.Close()
 
 	row.Next()
-	row.Scan(&user.Id, &user.Password, &user.Email)
+	row.Scan(&user.Id, &user.Password, &user.Email, &user.GithubName, &user.GithubToken)
 	return &user, nil
 }
 
@@ -181,6 +181,15 @@ func (s *sqliteHandler) RemoveProject(project data.Project, sessionId int) bool 
 	return cnt > 0
 }
 
+func (s *sqliteHandler) RegisterToken(sessionId int, token string) error {
+	statement, err := s.db.Prepare("UPDATE users SET githubToken=? WHERE sessionId=?")
+	if err != nil {
+		panic(err)
+	}
+	_, err = statement.Exec(token, sessionId)
+	return err
+}
+
 func newSqliteHandler(filepath string) DBHandler {
 	database, err := sql.Open("sqlite3", filepath)
 	if err != nil {
@@ -192,7 +201,8 @@ func newSqliteHandler(filepath string) DBHandler {
 			password STRING,
 			email STRING,
 			sessionId INTEGER,
-			githubName STRING
+			githubName STRING,
+			githubToken STRING
 		);`)
 	createProject, _ := database.Prepare(
 		`CREATE TABLE IF NOT EXISTS projects (
