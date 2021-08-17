@@ -53,6 +53,34 @@ $("#delete-project-btn").click(function(){
   });
 });
 
+// 프로젝트 생성 버튼 클릭
+$("#createapplication").click(function(){
+  var beforeParams = get_query(document.referrer)
+  var projectName = beforeParams.name;
+  fetch('/app', {
+    method: 'post',
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+        name: $('#newapplicationname-input').val(),
+        description: $('#newapplicationdesc-input').val(),
+        project: projectName,
+        runtime: $('#application-select option:selected').val(),
+      })
+  })
+  .then(res => res.json())
+  .then(res => {
+    if (res.success == true) {
+      alert("애플리케이션 생성 완료!");
+      location.href=document.referrer;
+    } else {
+      location.href="/html/404.html"
+    }
+  });
+});
+
+
 // 토큰 등록 버튼 클릭
 $("#register-token").click(function(){
   fetch('/user/token', {
@@ -115,8 +143,7 @@ function goProjectPage(obj){
 };
 
 // redirect시 url 파라미터 쿼리 얻기
-function get_query(){
-  var url = document.location.href;
+function get_query(url){
   var qs = url.substring(url.indexOf('?') + 1).split('&');
   for(var i = 0, result = {}; i < qs.length; i++){
     qs[i] = qs[i].split('=');
@@ -125,8 +152,7 @@ function get_query(){
   return result;
 }
 
-var parameters = get_query();
-console.log(parameters)
+var parameters = get_query(document.location.href);
 if (parameters.name != undefined) {
   var itemName = parameters.name;
   $("#name").text(itemName);

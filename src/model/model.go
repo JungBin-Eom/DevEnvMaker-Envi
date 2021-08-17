@@ -17,6 +17,7 @@ type DBHandler interface {
 	GetProjectList(int) []*data.Project
 
 	GetAppList(int) []*data.Application
+	CreateApp(data.Application, int) error
 }
 
 func NewDBHandler(filepath string) DBHandler {

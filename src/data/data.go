@@ -19,5 +19,8 @@ type Project struct {
 }
 
 type Application struct {
-	Name string `json:"name"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Project     string `json:"project"`
+	Runtime     string `json:"runtime"`
 }

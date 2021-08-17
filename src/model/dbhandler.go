@@ -190,6 +190,15 @@ func (s *sqliteHandler) RegisterToken(sessionId int, token string) error {
 	return err
 }
 
+func (s *sqliteHandler) CreateApp(app data.Application, sessionId int) error {
+	statement, err := s.db.Prepare("INSERT INTO applications (name, owner, description, project, runtime) VALUES (?, ?, ?, ?, ?)")
+	if err != nil {
+		panic(err)
+	}
+	_, err = statement.Exec(app.Name, sessionId, app.Description, app.Project, app.Runtime)
+	return err
+}
+
 func newSqliteHandler(filepath string) DBHandler {
 	database, err := sql.Open("sqlite3", filepath)
 	if err != nil {
@@ -217,8 +226,9 @@ func newSqliteHandler(filepath string) DBHandler {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name STRING,
 			owner INTEGER,
-			project STRING,
 			description STRING,
+			project STRING,
+			runtime STRING,
 			FOREIGN KEY(owner) REFERENCES users(sessionId),
 			FOREIGN KEY(project) REFERENCES projects(id)
 		);`)

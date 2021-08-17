@@ -31,7 +31,7 @@
         <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
 
             <!-- Sidebar - Brand -->
-            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="index.html">
+            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="../html/index.html">
                 <div class="sidebar-brand-text mx-3">Envi</div>
             </a>
 
@@ -40,7 +40,7 @@
 
             <!-- Nav Item - Dashboard -->
             <li class="nav-item active">
-                <a class="nav-link" href="index.html">
+                <a class="nav-link" href="../html/index.html">
                     <span>Dashboard</span></a>
             </li>
 
@@ -194,6 +194,8 @@
                                 <a class="dropdown-item text-center small text-gray-500" href="#">Show All Alerts</a>
                             </div>
                         </li>
+                        
+                        <div class="topbar-divider d-none d-sm-block"></div>
 
                         <!-- Nav Item - User Information -->
                         <li class="nav-item dropdown no-arrow">
@@ -203,9 +205,9 @@
                             </a>
                             <!-- Dropdown - User Information -->
                             <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
-                            aria-labelledby="userDropdown">
+                                aria-labelledby="userDropdown">
                                 <a class="dropdown-item" href="../html/token.html">
-                                    My Token
+                                    Token Setting
                                 </a>
                                 <a class="dropdown-item" href="#" data-toggle="modal" data-target="#logoutModal">
                                     Logout
@@ -218,55 +220,36 @@
                 </nav>
                 <!-- End of Topbar -->
 
-                <!-- Begin Page Content -->
+                <!-- Create Project Page Content -->
                 <div class="container-fluid">
 
-                    <!-- Page Heading -->
-                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800" id="name">hello</h1>
-                        <div class="button">
-                          <a href="../html/createapp.html" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" id="create-app-btn">Create Application</a>
-                          <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" id="delete-project-btn">Delete Project</a>
-                        </div>
+                  <div class="p-5">
+                    <div class="text-center">
+                      <h1 class="h4 text-gray-900 mb-4">Create New Application</h1>
                     </div>
+                    <form class="user">
+                      <div class="form-group">
+                        <input type="text" class="form-control form-control-user" id="newapplicationname-input" placeholder="New Application Name">
+                      </div>
+                      <div class="form-group">
+                        <input type="text" class="form-control form-control-user" id="newapplicationdesc-input" placeholder="New Application Description">
+                      </div>
+                      <div class="form-group select-div">
+                        <select class="form-control" name="Application" id="application-select">
+                          <option value="" aria-placeholder="hello">---Select Application Runtime---</option>
+                          <option value="React">React</option>
+                          <option value="Golang">Golang</option>
+                          <option value="Spring">Spring</option>
+                        </select>
+                      </div>
 
-                    <!-- Content Row -->
-                    <div class="row">
-
-                        <div class="col-lg-6 mb-4">
-
-                            <!-- Discription -->
-                            <div class="card shadow mb-4">
-                              <div class="card-header py-3">
-                                  <h6 class="m-0 font-weight-bold text-primary">Description</h6>
-                              </div>
-                              <div class="card-body">
-                                  <p id="project-description">
-                                    This is Project Description
-                                  </p>
-                              </div>
-                            </div>
-
-                            <!-- Application list -->
-                            <div class="card shadow mb-4">
-                                <div class="card-header py-3">
-                                    <h6 class="m-0 font-weight-bold text-primary">Application List</h6>
-                                </div>
-                                <div class="card-body">
-                                  <ul>
-                                    <li>
-                                      Application1
-                                      <p>
-                                        This is a description of Application 1.
-                                      </p>
-                                      <a target="_blank" rel="nofollow" href="https://undraw.co/">See Detail &rarr;</a>
-                                    </li>
-                                  </ul>
-                                </div>
-                              </div>
-
-                        </div>
-                    </div>
+                      <div class="create-btn">
+                        <a href="#none" class="btn btn-primary btn-user btn-block" id="createapplication">
+                          Create
+                        </a>
+                      </div>
+                    </form>
+                </div>
 
                 </div>
                 <!-- /.container-fluid -->
@@ -325,12 +308,6 @@
     <!-- Custom scripts for all pages-->
     <script src="../script/bootstrap/sb-admin-2.min.js"></script>
 
-    <!-- Page level plugins -->
-    <script src="../script/bootstrap/Chart.min.js"></script>
-
-    <!-- Page level custom scripts -->
-    <script src="../script/bootstrap/chart-area-demo.js"></script>
-    <script src="../script/bootstrap/chart-pie-demo.js"></script>
 
     <script src="../script/dashboard.js"></script>
 

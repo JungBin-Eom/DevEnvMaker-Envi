@@ -3,7 +3,7 @@ package app
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -67,6 +67,7 @@ func (a *AppHandler) SignUpHandler(rw http.ResponseWriter, r *http.Request) {
 	http.Redirect(rw, r, "/html/signup.html", http.StatusTemporaryRedirect)
 }
 
+// USER APIs
 func (a *AppHandler) LoginHandler(rw http.ResponseWriter, r *http.Request) {
 	var user data.Login
 	decoder := json.NewDecoder(r.Body)
@@ -105,6 +106,15 @@ func (a *AppHandler) DupCheckHandler(rw http.ResponseWriter, r *http.Request) {
 	rd.JSON(rw, http.StatusOK, Duplicated{dup})
 }
 
+func (a *AppHandler) UserInfoHandler(rw http.ResponseWriter, r *http.Request) {
+	sessionId := getSessionID(r)
+	user, err := a.db.UserInfo(sessionId)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+	}
+	rd.JSON(rw, http.StatusOK, user)
+}
+
 func (a *AppHandler) UserRegisterHandler(rw http.ResponseWriter, r *http.Request) {
 	var user data.User
 	sessionId := getSessionID(r)
@@ -121,6 +131,31 @@ func (a *AppHandler) UserRegisterHandler(rw http.ResponseWriter, r *http.Request
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 	}
 	rd.JSON(rw, http.StatusOK, Success{true})
+}
+
+func (a *AppHandler) RegisterTokenHandler(rw http.ResponseWriter, r *http.Request) {
+	sessionId := getSessionID(r)
+	type Token struct {
+		Token string `json:"token"`
+	}
+	var token Token
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&token)
+	if err != nil {
+		http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
+	}
+	err = a.db.RegisterToken(sessionId, token.Token)
+	if err != nil {
+		http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
+	}
+	rd.JSON(rw, http.StatusOK, Success{Success: true})
+}
+
+// PROJECT APIs
+func (a *AppHandler) GetProjectsHandler(rw http.ResponseWriter, r *http.Request) {
+	sessionId := getSessionID(r)
+	list := a.db.GetProjectList(sessionId)
+	rd.JSON(rw, http.StatusOK, list)
 }
 
 func (a *AppHandler) CreateProjectHandler(rw http.ResponseWriter, r *http.Request) {
@@ -151,7 +186,6 @@ func (a *AppHandler) CreateProjectHandler(rw http.ResponseWriter, r *http.Reques
 		req.Header.Set("content-type", "application/json")
 		req.Header.Set("authorization", "token "+user.GithubToken)
 		req.Header.Set("user-agent", user.GithubName)
-		fmt.Println(req)
 
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
@@ -165,27 +199,6 @@ func (a *AppHandler) CreateProjectHandler(rw http.ResponseWriter, r *http.Reques
 
 		rd.JSON(rw, http.StatusOK, Success{true})
 	}
-}
-
-func (a *AppHandler) UserInfoHandler(rw http.ResponseWriter, r *http.Request) {
-	sessionId := getSessionID(r)
-	user, err := a.db.UserInfo(sessionId)
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-	}
-	rd.JSON(rw, http.StatusOK, user)
-}
-
-func (a *AppHandler) GetProjectsHandler(rw http.ResponseWriter, r *http.Request) {
-	sessionId := getSessionID(r)
-	list := a.db.GetProjectList(sessionId)
-	rd.JSON(rw, http.StatusOK, list)
-}
-
-func (a *AppHandler) GetAppsHandler(rw http.ResponseWriter, r *http.Request) {
-	sessionId := getSessionID(r)
-	list := a.db.GetAppList(sessionId)
-	rd.JSON(rw, http.StatusOK, list)
 }
 
 func (a *AppHandler) RemoveProjectHandler(rw http.ResponseWriter, r *http.Request) {
@@ -215,28 +228,57 @@ func (a *AppHandler) GetProjectDetailHandler(rw http.ResponseWriter, r *http.Req
 	rd.JSON(rw, http.StatusOK, project)
 }
 
+// APPLICATION APIs
+func (a *AppHandler) GetAppsHandler(rw http.ResponseWriter, r *http.Request) {
+	sessionId := getSessionID(r)
+	list := a.db.GetAppList(sessionId)
+	rd.JSON(rw, http.StatusOK, list)
+}
+
+func (a *AppHandler) CreateAppHandler(rw http.ResponseWriter, r *http.Request) {
+	var newapp data.Application
+	sessionId := getSessionID(r)
+	user, _ := a.db.UserInfo(sessionId)
+	if user.GithubToken == "NULL" {
+		rd.JSON(rw, http.StatusOK, Success{false})
+	} else {
+		decoder := json.NewDecoder(r.Body)
+		err := decoder.Decode(&newapp)
+		if err != nil {
+			rd.JSON(rw, http.StatusOK, Success{false})
+		}
+
+		err = a.db.CreateApp(newapp, sessionId)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+		}
+
+		req, err := http.NewRequest("POST", "https://api.github.com/repos/Ricky-Envi/Envi-React/forks", nil)
+		if err != nil {
+			rd.JSON(rw, http.StatusOK, Success{false})
+		}
+		req.Header.Set("content-type", "application/json")
+		req.Header.Set("authorization", "token "+user.GithubToken)
+		req.Header.Set("user-agent", user.GithubName)
+
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			rd.JSON(rw, http.StatusOK, Success{false})
+		}
+		defer res.Body.Close()
+		_, err = ioutil.ReadAll(res.Body)
+		if err != nil {
+			http.Error(rw, "Unable to read body", http.StatusBadRequest)
+		}
+
+		rd.JSON(rw, http.StatusOK, Success{true})
+	}
+}
+
+// GITHUB APIs
 func (a *AppHandler) GetGitHubNameHandler(rw http.ResponseWriter, r *http.Request) {
 	githubName := getSessionName(r)
 	rd.Text(rw, http.StatusOK, githubName)
-}
-
-func (a *AppHandler) RegisterTokenHandler(rw http.ResponseWriter, r *http.Request) {
-	sessionId := getSessionID(r)
-	type Token struct {
-		Token string `json:"token"`
-	}
-	var token Token
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&token)
-	if err != nil {
-		http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
-	}
-	fmt.Println(token)
-	err = a.db.RegisterToken(sessionId, token.Token)
-	if err != nil {
-		http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
-	}
-	rd.JSON(rw, http.StatusOK, Success{Success: true})
 }
 
 func CheckSignin(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
@@ -283,6 +325,7 @@ func MakeHandler(filepath string) *AppHandler {
 	r.HandleFunc("/project/{name:[a-zA-Z0-9]+}", a.GetProjectDetailHandler).Methods("GET")
 
 	r.HandleFunc("/app", a.GetAppsHandler).Methods("GET")
+	r.HandleFunc("/app", a.CreateAppHandler).Methods("POST")
 
 	// r.HandleFunc("/repos", a.Repository).Methods("GET")
 

@@ -9,5 +9,7 @@
 -- Python  
 -- Node.js  
 -- React  
--- MySQL  
--- PostgreSQL  
+-- Spring  
+4. Fork를 하면 자동으로 GitHub repository 생성하는데 굳이 repo 만들고 다운로드받고 이럴 필요가 있을까? App 생성시 프로젝트 및 애플리케이션 생성! 
+
+
