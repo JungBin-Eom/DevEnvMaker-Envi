@@ -1,7 +1,6 @@
 package app
 
 import (
-	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -176,22 +175,22 @@ func (a *AppHandler) CreateProjectHandler(rw http.ResponseWriter, r *http.Reques
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
 		}
 
-		pbytes, _ := json.Marshal(newprj)
-		buff := bytes.NewBuffer(pbytes)
+		// pbytes, _ := json.Marshal(newprj)
+		// buff := bytes.NewBuffer(pbytes)
 
-		req, err := http.NewRequest("POST", "https://api.github.com/user/repos", buff)
-		if err != nil {
-			rd.JSON(rw, http.StatusOK, Success{false})
-		}
-		req.Header.Set("content-type", "application/json")
-		req.Header.Set("authorization", "token "+user.GithubToken)
-		req.Header.Set("user-agent", user.GithubName)
+		// req, err := http.NewRequest("POST", "https://api.github.com/user/repos", buff)
+		// if err != nil {
+		// 	rd.JSON(rw, http.StatusOK, Success{false})
+		// }
+		// req.Header.Set("content-type", "application/json")
+		// req.Header.Set("authorization", "token "+user.GithubToken)
+		// req.Header.Set("user-agent", user.GithubName)
 
-		res, err := http.DefaultClient.Do(req)
-		if err != nil {
-			rd.JSON(rw, http.StatusOK, Success{false})
-		}
-		defer res.Body.Close()
+		// res, err := http.DefaultClient.Do(req)
+		// if err != nil {
+		// 	rd.JSON(rw, http.StatusOK, Success{false})
+		// }
+		// defer res.Body.Close()
 		// _, err := ioutil.ReadAll(res.Body)
 		// if err != nil {
 		// 	http.Error(rw, "Unable to read body", http.StatusBadRequest)
@@ -275,6 +274,23 @@ func (a *AppHandler) CreateAppHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (a *AppHandler) RemoveAppHandler(rw http.ResponseWriter, r *http.Request) {
+	var app data.Application
+	sessionId := getSessionID(r)
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&app)
+	if err != nil {
+		http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
+	}
+	ok := a.db.RemoveApp(app, sessionId)
+	if ok {
+		rd.JSON(rw, http.StatusOK, Success{true})
+	} else {
+		rd.JSON(rw, http.StatusOK, Success{false})
+	}
+	rd.JSON(rw, http.StatusOK, Success{true})
+}
+
 // GITHUB APIs
 func (a *AppHandler) GetGitHubNameHandler(rw http.ResponseWriter, r *http.Request) {
 	githubName := getSessionName(r)
@@ -326,6 +342,7 @@ func MakeHandler(filepath string) *AppHandler {
 
 	r.HandleFunc("/app", a.GetAppsHandler).Methods("GET")
 	r.HandleFunc("/app", a.CreateAppHandler).Methods("POST")
+	r.HandleFunc("/app", a.RemoveAppHandler).Methods("DELETE")
 
 	// r.HandleFunc("/repos", a.Repository).Methods("GET")
 

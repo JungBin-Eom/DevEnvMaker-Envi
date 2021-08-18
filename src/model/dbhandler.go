@@ -136,14 +136,14 @@ func (s *sqliteHandler) GetProjectList(sessionId int) []*data.Project {
 
 func (s *sqliteHandler) GetAppList(sessionId int) []*data.Application {
 	apps := []*data.Application{}
-	rows, err := s.db.Query("SELECT name FROM applications WHERE owner=?", sessionId)
+	rows, err := s.db.Query("SELECT name, description, project FROM applications WHERE owner=?", sessionId)
 	if err != nil {
 		panic(err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var app data.Application
-		rows.Scan(&app.Name)
+		rows.Scan(&app.Name, &app.Description, &app.Project)
 		apps = append(apps, &app)
 	}
 	return apps
@@ -197,6 +197,30 @@ func (s *sqliteHandler) CreateApp(app data.Application, sessionId int) error {
 	}
 	_, err = statement.Exec(app.Name, sessionId, app.Description, app.Project, app.Runtime)
 	return err
+}
+
+func (s *sqliteHandler) RemoveApp(app data.Application, sessionId int) bool {
+	row, err := s.db.Query("SELECT id FROM applicatoins WHERE name=? AND owner=?", app.Name, sessionId)
+	if err != nil {
+		panic(err)
+	}
+	row.Next()
+	var id int
+	row.Scan(&id)
+	row.Close()
+
+	appStatement, err := s.db.Prepare("DELETE FROM applications WHERE id=?")
+	if err != nil {
+		panic(err)
+	}
+
+	appResult, err := appStatement.Exec(id)
+	if err != nil {
+		panic(err)
+	}
+
+	cnt, _ := appResult.RowsAffected()
+	return cnt > 0
 }
 
 func newSqliteHandler(filepath string) DBHandler {

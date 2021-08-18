@@ -9,7 +9,6 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/sessions v1.2.1
 	github.com/mattn/go-sqlite3 v1.14.8
-	github.com/rs/cors v1.8.0 // indirect
 	github.com/unrolled/render v1.4.0
 	github.com/urfave/negroni v1.0.0
 	golang.org/x/net v0.0.0-20210503060351-7fd8e65b6420 // indirect

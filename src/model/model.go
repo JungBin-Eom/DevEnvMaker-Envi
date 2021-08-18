@@ -18,6 +18,7 @@ type DBHandler interface {
 
 	GetAppList(int) []*data.Application
 	CreateApp(data.Application, int) error
+	RemoveApp(data.Application, int) bool
 }
 
 func NewDBHandler(filepath string) DBHandler {

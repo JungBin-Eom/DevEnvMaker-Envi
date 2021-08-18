@@ -53,7 +53,7 @@ $("#delete-project-btn").click(function(){
   });
 });
 
-// 프로젝트 생성 버튼 클릭
+// 애플리케이션 생성 버튼 클릭
 $("#createapplication").click(function(){
   var beforeParams = get_query(document.referrer)
   var projectName = beforeParams.name;
@@ -76,6 +76,31 @@ $("#createapplication").click(function(){
       location.href=document.referrer;
     } else {
       location.href="/html/404.html"
+    }
+  });
+});
+
+// 애플리케이션 삭제 버튼 클릭
+$("#delete-app-btn").click(function(){
+  var appName = $("h1").text();
+  fetch('/project', {
+    method: 'delete',
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+        name: appName,
+      })
+  })
+  .then(res => res.json())
+  .then(res => {
+    console.log(res)
+    if (res.success == true) {
+      $("#"+appName).remove();
+      alert("애플리케이션 삭제 완료!")
+      location.href="/"
+    } else {
+      alert("삭제 중 문제가 발생했습니다.")
     }
   });
 });
@@ -115,27 +140,28 @@ $.get("/project", function(items) {
   }
 });
 
-$.get("/app", function(items) {
-  if (items.length == 0) {
-    appList.append("<h6 class='collapse-header'>There is no application.</h6>");
-  } else {
-    items.forEach(e => {
-        addItem(e)
-    });
-  }
-});
-
-// 프로젝트, 애플리케이션마다 태그 추가
+// 프로젝트마다 태그 추가
 var projectList = $("#project-list")
-var appList = $("#app-list")
 
 var addProject = function(item) {
   projectList.append("<a class='collapse-item project' id='"+item.name+"' href='#none' onclick='goProjectPage(this)' >"+item.name+"</a>");
 };
 
-var addApp = function(item) {
-  appList.append("<a class='collapse-item application' id='"+item.name+"' href='#none'>"+item.name+"</a>");
-};
+// $.get("/app", function(items) {
+//   if (items.length == 0) {
+//     appList.append("<h6 class='collapse-header'>There is no application.</h6>");
+//   } else {
+//     items.forEach(e => {
+//         addItem(e)
+//     });
+//   }
+// });
+
+// var appList = $("#app-list")
+
+// var addApp = function(item) {
+//   appList.append("<a class='collapse-item application' id='"+item.name+"' href='#none'>"+item.name+"</a>");
+// };
 
 function goProjectPage(obj){
   projectName = $(obj).attr("id");
@@ -159,7 +185,23 @@ if (parameters.name != undefined) {
   $.get("/project/"+itemName, function(project) {
     $("#project-description").text(project.description);
   });
+  $.get("/app", function(items) {
+    if (items.length == 0) {
+      $("#app-list").append("<p>There is no application on project '"+parameters.name+"'.</p>");
+    } else {
+      items.forEach(e => {
+        if (e.project == parameters.name) {
+          console.log(e);
+          $("#app-list").append("<li>"+e.name+"<p>"+e.description+"</p>"+"<a target='_blank' rel='nofollow' href='../html/application.html?name="+e.name+"'>See Detail &rarr;</a>");
+        }
+      });
+    }
+  });
 }
+
+var addApp = function(item) {
+  appList.append("<a class='collapse-item application' id='"+item.name+"' href='#none'>"+item.name+"</a>");
+};
 
 // github link 클릭
 $("#github-link").click(function(){
