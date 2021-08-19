@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/JungBin-Eom/DevEnvMaker-Envi/data"
 	"github.com/JungBin-Eom/DevEnvMaker-Envi/model"
+	"github.com/bndr/gojenkins"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
@@ -356,6 +358,36 @@ func (a *AppHandler) GetAppDetailHandler(rw http.ResponseWriter, r *http.Request
 	rd.JSON(rw, http.StatusOK, app)
 }
 
+func (a *AppHandler) BuildAppHandler(rw http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	pw := os.Getenv("JENKINS_PW")
+	jenkins := gojenkins.CreateJenkins(nil, "http://jenkins.3.35.25.64.sslip.io", "admin", pw)
+	// Provide CA certificate if server is using self-signed certificate
+	// caCert, _ := ioutil.ReadFile("/tmp/ca.crt")
+	// jenkins.Requester.CACert = caCert
+	_, err := jenkins.Init(ctx)
+
+	// if err != nil {
+	// 	panic("Something Went Wrong")
+	// }
+	// jenkins.CreateJob()
+	// job := jenkins.GetJobObj(ctx, "#jobname")
+	// queueid, err := jenkins.InvokeSimple(ctx, params)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// build, err := jenkins.GetBuildFromQueueID(ctx, job, queueid)
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// // Wait for build to finish
+	// for build.IsRunning(ctx) {
+	// 	time.Sleep(5000 * time.Millisecond)
+	// 	build.Poll(ctx)
+	// }
+}
+
 // GITHUB APIs
 func (a *AppHandler) GetGitHubNameHandler(rw http.ResponseWriter, r *http.Request) {
 	githubName := getSessionName(r)
@@ -409,6 +441,7 @@ func MakeHandler(filepath string) *AppHandler {
 	r.HandleFunc("/app", a.CreateAppHandler).Methods("POST")
 	r.HandleFunc("/app", a.RemoveAppHandler).Methods("DELETE")
 	r.HandleFunc("/app/{projname:[a-zA-Z0-9]+}/{appname:[a-zA-Z0-9]+}", a.GetAppDetailHandler).Methods("GET")
+	r.HandleFunc("/app/build", a.BuildAppHandler).Methods("POST")
 
 	// r.HandleFunc("/repos", a.Repository).Methods("GET")
 

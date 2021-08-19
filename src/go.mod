@@ -3,6 +3,7 @@ module github.com/JungBin-Eom/DevEnvMaker-Envi
 go 1.16
 
 require (
+	github.com/bndr/gojenkins v1.1.0 // indirect
 	github.com/go-openapi/runtime v0.19.29
 	github.com/google/go-github/v37 v37.0.0
 	github.com/google/uuid v1.1.2 // indirect
