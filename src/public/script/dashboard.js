@@ -115,6 +115,27 @@ $("#delete-app-btn").click(function(){
   });
 });
 
+$("#build-app-btn").click(function(){
+  var appName = $("h1").text();
+  fetch('/app/build', {
+    method: 'post',
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+        name: appName,
+      })
+  })
+  .then(res => res.json())
+  .then(res => {
+    if (res.success == true) {
+      alert("OK")
+    } else {
+      alert("NOT OK")
+    }
+  });
+});
+
 
 // 토큰 등록 버튼 클릭
 $("#register-token").click(function(){
@@ -196,14 +217,19 @@ if (parameters.name != undefined) {
       $("#description").text(project.description);
     });
     $.get("/app", function(items) {
+      var count = 0;
       if (items.length == 0) {
         $("#app-list").append("<p>There is no application on project '"+parameters.name+"'.</p>");
       } else {
         items.forEach(e => {
           if (e.project == parameters.name) {
+            count = count + 1;
             $("#app-list").append("<li><b>"+e.name+"</b><p>"+e.description+"</p>"+"<a rel='nofollow' href='../html/application.html?name="+e.name+"'>See Detail &rarr;</a>");
           }
         });
+        if (count == 0) {
+          $("#app-list").append("<p>There is no application on project '"+parameters.name+"'.</p>");
+        }
       }
     });
   } else if (document.location.href.indexOf("application") != -1) {

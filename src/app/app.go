@@ -359,33 +359,28 @@ func (a *AppHandler) GetAppDetailHandler(rw http.ResponseWriter, r *http.Request
 }
 
 func (a *AppHandler) BuildAppHandler(rw http.ResponseWriter, r *http.Request) {
+	var app data.Application
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&app)
+	if err != nil {
+		http.Redirect(rw, r, "../html/404.html", http.StatusTemporaryRedirect)
+	}
 	ctx := context.Background()
 	pw := os.Getenv("JENKINS_PW")
 	jenkins := gojenkins.CreateJenkins(nil, "http://jenkins.3.35.25.64.sslip.io", "admin", pw)
 	// Provide CA certificate if server is using self-signed certificate
 	// caCert, _ := ioutil.ReadFile("/tmp/ca.crt")
 	// jenkins.Requester.CACert = caCert
-	_, err := jenkins.Init(ctx)
+	_, err = jenkins.Init(ctx)
 
-	// if err != nil {
-	// 	panic("Something Went Wrong")
-	// }
-	// jenkins.CreateJob()
-	// job := jenkins.GetJobObj(ctx, "#jobname")
-	// queueid, err := jenkins.InvokeSimple(ctx, params)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// build, err := jenkins.GetBuildFromQueueID(ctx, job, queueid)
-	// if err != nil {
-	// 	panic(err)
-	// }
+	if err != nil {
+		panic("Something Went Wrong")
+	}
 
-	// // Wait for build to finish
-	// for build.IsRunning(ctx) {
-	// 	time.Sleep(5000 * time.Millisecond)
-	// 	build.Poll(ctx)
-	// }
+	// 1. Jenkins Pipeline 생성
+	// 2. Jenkins Pipeline 실행
+
+	rd.JSON(rw, http.StatusOK, Success{true})
 }
 
 // GITHUB APIs
