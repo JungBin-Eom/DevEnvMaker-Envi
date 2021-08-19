@@ -110,13 +110,26 @@ func (s *sqliteHandler) GetProject(name string, sessionId int) (*data.Project, e
 	return &project, nil
 }
 
-func (s *sqliteHandler) CreateProject(project data.Project, sessionId int) error {
-	statement, err := s.db.Prepare("INSERT INTO projects (name, owner, description) VALUES (?, ?, ?)")
+func (s *sqliteHandler) CreateProject(project data.Project, sessionId int) (int, error) {
+	row, err := s.db.Query("SELECT COUNT(*) FROM projects WHERE name=?", project.Name)
 	if err != nil {
 		panic(err)
 	}
-	_, err = statement.Exec(project.Name, sessionId, project.Description)
-	return err
+
+	row.Next()
+	var count int
+	row.Scan(&count)
+	row.Close()
+	if count != 0 {
+		return count, nil
+	} else {
+		statement, err := s.db.Prepare("INSERT INTO projects (name, owner, description) VALUES (?, ?, ?)")
+		if err != nil {
+			panic(err)
+		}
+		_, err = statement.Exec(project.Name, sessionId, project.Description)
+		return 0, err
+	}
 }
 
 func (s *sqliteHandler) GetProjectList(sessionId int) []*data.Project {
@@ -190,17 +203,30 @@ func (s *sqliteHandler) RegisterToken(sessionId int, token string) error {
 	return err
 }
 
-func (s *sqliteHandler) CreateApp(app data.Application, sessionId int) error {
-	statement, err := s.db.Prepare("INSERT INTO applications (name, owner, description, project, runtime) VALUES (?, ?, ?, ?, ?)")
+func (s *sqliteHandler) CreateApp(app data.Application, sessionId int) (int, error) {
+	row, err := s.db.Query("SELECT COUNT(*) FROM applications WHERE name=?", app.Name)
 	if err != nil {
 		panic(err)
 	}
-	_, err = statement.Exec(app.Name, sessionId, app.Description, app.Project, app.Runtime)
-	return err
+
+	row.Next()
+	var count int
+	row.Scan(&count)
+	row.Close()
+	if count != 0 {
+		return count, nil
+	} else {
+		statement, err := s.db.Prepare("INSERT INTO applications (name, owner, description, project, runtime) VALUES (?, ?, ?, ?, ?)")
+		if err != nil {
+			panic(err)
+		}
+		_, err = statement.Exec(app.Name, sessionId, app.Description, app.Project, app.Runtime)
+		return 0, err
+	}
 }
 
 func (s *sqliteHandler) RemoveApp(app data.Application, sessionId int) bool {
-	row, err := s.db.Query("SELECT id FROM applicatoins WHERE name=? AND owner=?", app.Name, sessionId)
+	row, err := s.db.Query("SELECT id FROM applications WHERE name=? AND owner=?", app.Name, sessionId)
 	if err != nil {
 		panic(err)
 	}
@@ -221,6 +247,20 @@ func (s *sqliteHandler) RemoveApp(app data.Application, sessionId int) bool {
 
 	cnt, _ := appResult.RowsAffected()
 	return cnt > 0
+}
+
+func (s *sqliteHandler) GetApp(project string, name string, sessionId int) (*data.Application, error) {
+	var app data.Application
+
+	row, err := s.db.Query("SELECT name, description FROM applications WHERE project=? AND name=? AND owner=?", project, name, sessionId)
+	if err != nil {
+		return &app, err
+	}
+	defer row.Close()
+
+	row.Next()
+	row.Scan(&app.Name, &app.Description)
+	return &app, nil
 }
 
 func newSqliteHandler(filepath string) DBHandler {
@@ -254,7 +294,7 @@ func newSqliteHandler(filepath string) DBHandler {
 			project STRING,
 			runtime STRING,
 			FOREIGN KEY(owner) REFERENCES users(sessionId),
-			FOREIGN KEY(project) REFERENCES projects(id)
+			FOREIGN KEY(project) REFERENCES projects(name)
 		);`)
 	createUser.Exec()
 	createProject.Exec()

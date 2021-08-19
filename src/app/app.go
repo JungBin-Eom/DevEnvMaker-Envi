@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -26,6 +27,11 @@ type AppHandler struct {
 
 type Success struct {
 	Success bool `json:"success"`
+}
+
+type CreateSuccess struct {
+	Success bool `json:"success"`
+	Count   int  `json:"count"`
 }
 
 var getSessionID = func(r *http.Request) int {
@@ -162,15 +168,19 @@ func (a *AppHandler) CreateProjectHandler(rw http.ResponseWriter, r *http.Reques
 	sessionId := getSessionID(r)
 	user, _ := a.db.UserInfo(sessionId)
 	if user.GithubToken == "NULL" {
-		rd.JSON(rw, http.StatusOK, Success{false})
+		rd.JSON(rw, http.StatusOK, CreateSuccess{false, 0})
 	} else {
 		decoder := json.NewDecoder(r.Body)
 		err := decoder.Decode(&newprj)
 		if err != nil {
-			rd.JSON(rw, http.StatusOK, Success{false})
+			rd.JSON(rw, http.StatusOK, CreateSuccess{false, 0})
 		}
 
-		err = a.db.CreateProject(newprj, sessionId)
+		count, err := a.db.CreateProject(newprj, sessionId)
+		if count != 0 {
+			rd.JSON(rw, http.StatusBadRequest, CreateSuccess{false, count})
+			return
+		}
 		if err != nil {
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
 		}
@@ -196,7 +206,7 @@ func (a *AppHandler) CreateProjectHandler(rw http.ResponseWriter, r *http.Reques
 		// 	http.Error(rw, "Unable to read body", http.StatusBadRequest)
 		// }
 
-		rd.JSON(rw, http.StatusOK, Success{true})
+		rd.JSON(rw, http.StatusOK, CreateSuccess{true, 0})
 	}
 }
 
@@ -239,22 +249,26 @@ func (a *AppHandler) CreateAppHandler(rw http.ResponseWriter, r *http.Request) {
 	sessionId := getSessionID(r)
 	user, _ := a.db.UserInfo(sessionId)
 	if user.GithubToken == "NULL" {
-		rd.JSON(rw, http.StatusOK, Success{false})
+		rd.JSON(rw, http.StatusBadRequest, CreateSuccess{false, 0})
 	} else {
 		decoder := json.NewDecoder(r.Body)
 		err := decoder.Decode(&newapp)
 		if err != nil {
-			rd.JSON(rw, http.StatusOK, Success{false})
+			rd.JSON(rw, http.StatusBadRequest, CreateSuccess{false, 0})
 		}
 
-		err = a.db.CreateApp(newapp, sessionId)
+		count, err := a.db.CreateApp(newapp, sessionId)
+		if count != 0 {
+			rd.JSON(rw, http.StatusBadRequest, CreateSuccess{false, count})
+			return
+		}
 		if err != nil {
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
 		}
 
 		req, err := http.NewRequest("POST", "https://api.github.com/repos/Ricky-Envi/Envi-React/forks", nil)
 		if err != nil {
-			rd.JSON(rw, http.StatusOK, Success{false})
+			rd.JSON(rw, http.StatusInternalServerError, CreateSuccess{false, 0})
 		}
 		req.Header.Set("content-type", "application/json")
 		req.Header.Set("authorization", "token "+user.GithubToken)
@@ -262,21 +276,42 @@ func (a *AppHandler) CreateAppHandler(rw http.ResponseWriter, r *http.Request) {
 
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
-			rd.JSON(rw, http.StatusOK, Success{false})
+			rd.JSON(rw, http.StatusBadRequest, CreateSuccess{false, 0})
 		}
-		defer res.Body.Close()
 		_, err = ioutil.ReadAll(res.Body)
 		if err != nil {
 			http.Error(rw, "Unable to read body", http.StatusBadRequest)
 		}
+		res.Body.Close()
 
-		rd.JSON(rw, http.StatusOK, Success{true})
+		pbytes, _ := json.Marshal(newapp)
+		buff := bytes.NewBuffer(pbytes)
+		req, err = http.NewRequest("PATCH", "https://api.github.com/repos/"+user.GithubName+"/Envi-"+newapp.Runtime, buff)
+		if err != nil {
+			rd.JSON(rw, http.StatusInternalServerError, CreateSuccess{false, 0})
+		}
+		req.Header.Set("content-type", "application/json")
+		req.Header.Set("authorization", "token "+user.GithubToken)
+		req.Header.Set("user-agent", user.GithubName)
+
+		res, err = http.DefaultClient.Do(req)
+		if err != nil {
+			rd.JSON(rw, http.StatusBadRequest, CreateSuccess{false, 0})
+		}
+		_, err = ioutil.ReadAll(res.Body)
+		if err != nil {
+			http.Error(rw, "Unable to read body", http.StatusBadRequest)
+		}
+		res.Body.Close()
+
+		rd.JSON(rw, http.StatusOK, CreateSuccess{true, 0})
 	}
 }
 
 func (a *AppHandler) RemoveAppHandler(rw http.ResponseWriter, r *http.Request) {
 	var app data.Application
 	sessionId := getSessionID(r)
+	user, _ := a.db.UserInfo(sessionId)
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&app)
 	if err != nil {
@@ -284,11 +319,41 @@ func (a *AppHandler) RemoveAppHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 	ok := a.db.RemoveApp(app, sessionId)
 	if ok {
+		req, err := http.NewRequest("DELETE", "https://api.github.com/repos/"+user.GithubName+"/"+app.Name, nil)
+		if err != nil {
+			rd.JSON(rw, http.StatusInternalServerError, Success{false})
+			return
+		}
+		req.Header.Set("content-type", "application/json")
+		req.Header.Set("authorization", "token "+user.GithubToken)
+		req.Header.Set("user-agent", user.GithubName)
+
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			rd.JSON(rw, http.StatusBadRequest, Success{false})
+			return
+		}
+		_, err = ioutil.ReadAll(res.Body)
+		if err != nil {
+			http.Error(rw, "Unable to read body", http.StatusBadRequest)
+		}
+		res.Body.Close()
 		rd.JSON(rw, http.StatusOK, Success{true})
 	} else {
 		rd.JSON(rw, http.StatusOK, Success{false})
 	}
-	rd.JSON(rw, http.StatusOK, Success{true})
+}
+
+func (a *AppHandler) GetAppDetailHandler(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	project, _ := vars["projname"]
+	name, _ := vars["appname"]
+	sessionId := getSessionID(r)
+	app, err := a.db.GetApp(project, name, sessionId)
+	if err != nil {
+		http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
+	}
+	rd.JSON(rw, http.StatusOK, app)
 }
 
 // GITHUB APIs
@@ -343,6 +408,7 @@ func MakeHandler(filepath string) *AppHandler {
 	r.HandleFunc("/app", a.GetAppsHandler).Methods("GET")
 	r.HandleFunc("/app", a.CreateAppHandler).Methods("POST")
 	r.HandleFunc("/app", a.RemoveAppHandler).Methods("DELETE")
+	r.HandleFunc("/app/{projname:[a-zA-Z0-9]+}/{appname:[a-zA-Z0-9]+}", a.GetAppDetailHandler).Methods("GET")
 
 	// r.HandleFunc("/repos", a.Repository).Methods("GET")
 

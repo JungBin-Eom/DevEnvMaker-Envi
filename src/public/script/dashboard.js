@@ -6,26 +6,33 @@ $.get("/user", function(user) {
 
 // 프로젝트 생성 버튼 클릭
 $("#createproject").click(function(){
-  fetch('/project', {
-    method: 'post',
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-        name: $('#newprojectname-input').val(),
-        description: $('#newprojectdesc-input').val(),
-      })
-  })
-  .then(res => res.json())
-  .then(res => {
-    console.log(res)
-    if (res.success == true) {
-      alert("프로젝트 생성 완료!")
-      location.href="/"
-    } else {
-      location.href="/html/404.html"
-    }
-  });
+  if ($('#newprojectname-input').val().indexOf(' ') != -1) {
+    alert("프로젝트 이름에는 공백 문자를 포함할 수 없습니다.");
+    $('#newprojectname-input').val('');
+  } else {
+    fetch('/project', {
+      method: 'post',
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+          name: $('#newprojectname-input').val(),
+          description: $('#newprojectdesc-input').val(),
+        })
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (res.success == true) {
+        alert("프로젝트 생성 완료!");
+        location.href="/";
+      } else if (res.count != 0) {
+        alert("같은 이름의 프로젝트가 존재합니다.");
+        $('#newprojectname-input').val('');
+      } else {
+        location.href="/html/404.html";
+      }
+    });
+  }
 });
 
 // 프로젝트 삭제 버튼 클릭
@@ -42,7 +49,6 @@ $("#delete-project-btn").click(function(){
   })
   .then(res => res.json())
   .then(res => {
-    console.log(res)
     if (res.success == true) {
       $("#"+projectName).remove();
       alert("프로젝트 삭제 완료!")
@@ -55,35 +61,40 @@ $("#delete-project-btn").click(function(){
 
 // 애플리케이션 생성 버튼 클릭
 $("#createapplication").click(function(){
-  var beforeParams = get_query(document.referrer)
-  var projectName = beforeParams.name;
-  fetch('/app', {
-    method: 'post',
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-        name: $('#newapplicationname-input').val(),
-        description: $('#newapplicationdesc-input').val(),
-        project: projectName,
-        runtime: $('#application-select option:selected').val(),
-      })
-  })
-  .then(res => res.json())
-  .then(res => {
-    if (res.success == true) {
-      alert("애플리케이션 생성 완료!");
-      location.href=document.referrer;
-    } else {
-      location.href="/html/404.html"
-    }
-  });
+  if ($('#newapplicationname-input').val().indexOf(' ') != -1) {
+    alert("애플리케이션 이름에는 공백 문자를 포함할 수 없습니다.");
+    $('#newapplicationname-input').val('');
+  } else {
+    var beforeParams = get_query(document.referrer)
+    var projectName = beforeParams.name;
+    fetch('/app', {
+      method: 'post',
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+          name: $('#newapplicationname-input').val(),
+          description: $('#newapplicationdesc-input').val(),
+          project: projectName,
+          runtime: $('#application-select option:selected').val(),
+        })
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (res.success == true) {
+        alert("애플리케이션 생성 완료!");
+        location.href=document.referrer;
+      } else {
+        location.href="/html/404.html"
+      }
+    });
+  }
 });
 
 // 애플리케이션 삭제 버튼 클릭
 $("#delete-app-btn").click(function(){
   var appName = $("h1").text();
-  fetch('/project', {
+  fetch('/app', {
     method: 'delete',
     headers: {
       "Content-Type": "application/json",
@@ -94,7 +105,6 @@ $("#delete-app-btn").click(function(){
   })
   .then(res => res.json())
   .then(res => {
-    console.log(res)
     if (res.success == true) {
       $("#"+appName).remove();
       alert("애플리케이션 삭제 완료!")
@@ -119,7 +129,6 @@ $("#register-token").click(function(){
   })
   .then(res => res.json())
   .then(res => {
-    console.log(res)
     if (res.success == true) {
       alert("토큰 등록 완료!")
       location.href="/"
@@ -182,21 +191,28 @@ var parameters = get_query(document.location.href);
 if (parameters.name != undefined) {
   var itemName = parameters.name;
   $("#name").text(itemName);
-  $.get("/project/"+itemName, function(project) {
-    $("#project-description").text(project.description);
-  });
-  $.get("/app", function(items) {
-    if (items.length == 0) {
-      $("#app-list").append("<p>There is no application on project '"+parameters.name+"'.</p>");
-    } else {
-      items.forEach(e => {
-        if (e.project == parameters.name) {
-          console.log(e);
-          $("#app-list").append("<li>"+e.name+"<p>"+e.description+"</p>"+"<a target='_blank' rel='nofollow' href='../html/application.html?name="+e.name+"'>See Detail &rarr;</a>");
-        }
-      });
-    }
-  });
+  if (document.location.href.indexOf("project") != -1) {
+    $.get("/project/"+itemName, function(project) {
+      $("#description").text(project.description);
+    });
+    $.get("/app", function(items) {
+      if (items.length == 0) {
+        $("#app-list").append("<p>There is no application on project '"+parameters.name+"'.</p>");
+      } else {
+        items.forEach(e => {
+          if (e.project == parameters.name) {
+            $("#app-list").append("<li><b>"+e.name+"</b><p>"+e.description+"</p>"+"<a rel='nofollow' href='../html/application.html?name="+e.name+"'>See Detail &rarr;</a>");
+          }
+        });
+      }
+    });
+  } else if (document.location.href.indexOf("application") != -1) {
+    var beforeParams = get_query(document.referrer)
+    var projectName = beforeParams.name;
+    $.get("/app/"+projectName+"/"+itemName, function(app) {
+      $("#description").text(app.description);
+    });
+  }
 }
 
 var addApp = function(item) {

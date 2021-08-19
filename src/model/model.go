@@ -12,12 +12,13 @@ type DBHandler interface {
 	RegisterToken(int, string) error
 
 	GetProject(string, int) (*data.Project, error)
-	CreateProject(data.Project, int) error
+	CreateProject(data.Project, int) (int, error)
 	RemoveProject(data.Project, int) bool
 	GetProjectList(int) []*data.Project
 
+	GetApp(string, string, int) (*data.Application, error)
 	GetAppList(int) []*data.Application
-	CreateApp(data.Application, int) error
+	CreateApp(data.Application, int) (int, error)
 	RemoveApp(data.Application, int) bool
 }
 
