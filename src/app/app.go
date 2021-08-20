@@ -187,6 +187,20 @@ func (a *AppHandler) CreateProjectHandler(rw http.ResponseWriter, r *http.Reques
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
 		}
 
+		// ctx := context.Background()
+		pw := os.Getenv("JENKINS_PW")
+		jenkins := gojenkins.CreateJenkins(nil, "http://jenkins.3.35.25.64.sslip.io", "admin", pw)
+		// Provide CA certificate if server is using self-signed certificate
+		// caCert, _ := ioutil.ReadFile("/tmp/ca.crt")
+		// jenkins.Requester.CACert = caCert
+		_, err = jenkins.Init(r.Context())
+
+		if err != nil {
+			panic("Something Went Wrong")
+		}
+
+		jenkins.CreateFolder(r.Context(), newprj.Name)
+
 		// pbytes, _ := json.Marshal(newprj)
 		// buff := bytes.NewBuffer(pbytes)
 
@@ -377,6 +391,7 @@ func (a *AppHandler) BuildAppHandler(rw http.ResponseWriter, r *http.Request) {
 		panic("Something Went Wrong")
 	}
 
+	_, _ = jenkins.CreateFolder(ctx, "newFolder")
 	// 1. Jenkins Pipeline 생성
 	// 2. Jenkins Pipeline 실행
 
