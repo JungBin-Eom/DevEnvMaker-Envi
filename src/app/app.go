@@ -434,6 +434,11 @@ func (a *AppHandler) GetAppDetailHandler(rw http.ResponseWriter, r *http.Request
 	rd.JSON(rw, http.StatusOK, app)
 }
 
+type BuildSuccess struct {
+	Success bool `json:"success"`
+	Id      int  `json:"id"`
+}
+
 func (a *AppHandler) BuildAppHandler(rw http.ResponseWriter, r *http.Request) {
 	var app data.Application
 	decoder := json.NewDecoder(r.Body)
@@ -441,23 +446,32 @@ func (a *AppHandler) BuildAppHandler(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Redirect(rw, r, "../html/404.html", http.StatusTemporaryRedirect)
 	}
-	// ctx := context.Background()
-	// pw := os.Getenv("JENKINS_PW")
-	// jenkins := gojenkins.CreateJenkins(nil, "http://jenkins.3.35.25.64.sslip.io", "admin", pw)
-	// // Provide CA certificate if server is using self-signed certificate
-	// // caCert, _ := ioutil.ReadFile("/tmp/ca.crt")
-	// // jenkins.Requester.CACert = caCert
-	// _, err = jenkins.Init(ctx)
+	sessionId := getSessionID(r)
+	apps := a.db.GetAppList(sessionId)
+	for _, item := range apps {
+		if item.Name == app.Name {
+			app.Project = item.Project
+			break
+		}
+	}
 
-	// if err != nil {
-	// 	panic("Something Went Wrong")
-	// }
+	pw := os.Getenv("JENKINS_PW")
+	jenkins := gojenkins.CreateJenkins(nil, "http://jenkins.3.35.25.64.sslip.io", "admin", pw)
+	// Provide CA certificate if server is using self-signed certificate
+	// caCert, _ := ioutil.ReadFile("/tmp/ca.crt")
+	// jenkins.Requester.CACert = caCert
+	_, err = jenkins.Init(r.Context())
 
-	// _, _ = jenkins.CreateFolder(ctx, "newFolder")
-	// 1. Jenkins Pipeline 생성
-	// 2. Jenkins Pipeline 실행
+	if err != nil {
+		panic("Something Went Wrong")
+	}
+	jobName := app.Project + "/job/" + app.Name
+	buildId, err := jenkins.BuildJob(r.Context(), jobName, nil)
+	if err != nil {
+		rd.JSON(rw, http.StatusInternalServerError, Success{false})
+	}
 
-	rd.JSON(rw, http.StatusOK, Success{true})
+	rd.JSON(rw, http.StatusOK, BuildSuccess{true, int(buildId)})
 }
 
 // GITHUB APIs

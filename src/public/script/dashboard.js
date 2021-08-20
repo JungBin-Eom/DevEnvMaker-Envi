@@ -131,7 +131,7 @@ $("#build-app-btn").click(function(){
     if (res.success == true) {
       alert("OK")
     } else {
-      alert("NOT OK")
+      location.href = "/html/404.html"
     }
   });
 });
