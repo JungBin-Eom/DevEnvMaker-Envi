@@ -108,7 +108,7 @@ $("#delete-app-btn").click(function(){
     if (res.success == true) {
       $("#"+appName).remove();
       alert("애플리케이션 삭제 완료!")
-      location.href="/"
+      location.href=document.referrer;
     } else {
       alert("삭제 중 문제가 발생했습니다.")
     }
@@ -135,7 +135,6 @@ $("#build-app-btn").click(function(){
     }
   });
 });
-
 
 // 토큰 등록 버튼 클릭
 $("#register-token").click(function(){

@@ -226,21 +226,12 @@ func (s *sqliteHandler) CreateApp(app data.Application, sessionId int) (int, err
 }
 
 func (s *sqliteHandler) RemoveApp(app data.Application, sessionId int) bool {
-	row, err := s.db.Query("SELECT id FROM applications WHERE name=? AND owner=? AND project=?", app.Name, sessionId, app.Project)
-	if err != nil {
-		panic(err)
-	}
-	row.Next()
-	var id int
-	row.Scan(&id)
-	row.Close()
-
-	appStatement, err := s.db.Prepare("DELETE FROM applications WHERE id=?")
+	appStatement, err := s.db.Prepare("DELETE FROM applications WHERE name=? AND owner=?")
 	if err != nil {
 		panic(err)
 	}
 
-	appResult, err := appStatement.Exec(id)
+	appResult, err := appStatement.Exec(app.Name, sessionId)
 	if err != nil {
 		panic(err)
 	}

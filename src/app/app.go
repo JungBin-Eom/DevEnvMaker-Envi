@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -186,12 +187,8 @@ func (a *AppHandler) CreateProjectHandler(rw http.ResponseWriter, r *http.Reques
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
 		}
 
-		// ctx := context.Background()
 		pw := os.Getenv("JENKINS_PW")
 		jenkins := gojenkins.CreateJenkins(nil, "http://jenkins.3.35.25.64.sslip.io", "admin", pw)
-		// Provide CA certificate if server is using self-signed certificate
-		// caCert, _ := ioutil.ReadFile("/tmp/ca.crt")
-		// jenkins.Requester.CACert = caCert
 		_, err = jenkins.Init(r.Context())
 
 		if err != nil {
@@ -235,10 +232,23 @@ func (a *AppHandler) RemoveProjectHandler(rw http.ResponseWriter, r *http.Reques
 	}
 	ok := a.db.RemoveProject(project, sessionId)
 	if ok {
-		rd.JSON(rw, http.StatusOK, Success{true})
+		pw := os.Getenv("JENKINS_PW")
+		jenkins := gojenkins.CreateJenkins(nil, "http://jenkins.3.35.25.64.sslip.io", "admin", pw)
+		_, err = jenkins.Init(r.Context())
+		if err != nil {
+			rd.JSON(rw, http.StatusOK, Success{false})
+		}
+
+		deleteFolder, err := jenkins.DeleteJob(r.Context(), project.Name)
+		if err != nil || deleteFolder == false {
+			rd.JSON(rw, http.StatusOK, Success{false})
+		} else {
+			rd.JSON(rw, http.StatusOK, Success{true})
+		}
 	} else {
 		rd.JSON(rw, http.StatusOK, Success{false})
 	}
+	return
 }
 
 func (a *AppHandler) GetProjectDetailHandler(rw http.ResponseWriter, r *http.Request) {
@@ -395,6 +405,15 @@ func (a *AppHandler) RemoveAppHandler(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
 	}
+
+	apps := a.db.GetAppList(sessionId)
+	for _, item := range apps {
+		if item.Name == app.Name {
+			app.Project = item.Project
+			break
+		}
+	}
+
 	ok := a.db.RemoveApp(app, sessionId)
 	if ok {
 		req, err := http.NewRequest("DELETE", "https://api.github.com/repos/"+user.GithubName+"/"+app.Name, nil)
@@ -408,6 +427,7 @@ func (a *AppHandler) RemoveAppHandler(rw http.ResponseWriter, r *http.Request) {
 
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
+			fmt.Println("github api error")
 			rd.JSON(rw, http.StatusBadRequest, Success{false})
 			return
 		}
@@ -416,7 +436,21 @@ func (a *AppHandler) RemoveAppHandler(rw http.ResponseWriter, r *http.Request) {
 			http.Error(rw, "Unable to read body", http.StatusBadRequest)
 		}
 		res.Body.Close()
-		rd.JSON(rw, http.StatusOK, Success{true})
+
+		pw := os.Getenv("JENKINS_PW")
+		jenkins := gojenkins.CreateJenkins(nil, "http://jenkins.3.35.25.64.sslip.io", "admin", pw)
+		_, err = jenkins.Init(r.Context())
+		if err != nil {
+			rd.JSON(rw, http.StatusOK, Success{false})
+		}
+
+		jobName := app.Project + "/job/" + app.Name
+		deleteJob, err := jenkins.DeleteJob(r.Context(), jobName)
+		if err != nil || deleteJob == false {
+			rd.JSON(rw, http.StatusOK, Success{false})
+		} else {
+			rd.JSON(rw, http.StatusOK, Success{true})
+		}
 	} else {
 		rd.JSON(rw, http.StatusOK, Success{false})
 	}
@@ -457,9 +491,6 @@ func (a *AppHandler) BuildAppHandler(rw http.ResponseWriter, r *http.Request) {
 
 	pw := os.Getenv("JENKINS_PW")
 	jenkins := gojenkins.CreateJenkins(nil, "http://jenkins.3.35.25.64.sslip.io", "admin", pw)
-	// Provide CA certificate if server is using self-signed certificate
-	// caCert, _ := ioutil.ReadFile("/tmp/ca.crt")
-	// jenkins.Requester.CACert = caCert
 	_, err = jenkins.Init(r.Context())
 
 	if err != nil {
