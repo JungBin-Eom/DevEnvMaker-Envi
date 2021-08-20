@@ -129,6 +129,16 @@ $("#build-app-btn").click(function(){
   .then(res => res.json())
   .then(res => {
     if (res.success == true) {
+      var status = 0;
+      while(status != 100) {
+        $.get("/app/build/status", function(now) {
+          if (now.status == true && now.running == true) {
+            console.log("building...", status);
+            status += 1;
+            
+          }
+        });
+      }
       alert("OK")
     } else {
       location.href = "/html/404.html"
