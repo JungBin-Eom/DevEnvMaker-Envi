@@ -1,3 +1,5 @@
+
+
 // 오른쪽 상단 사용자 이름 표시
 $.get("/user", function(user) {
   $("#user-id").html(user.id)
@@ -115,6 +117,10 @@ $("#delete-app-btn").click(function(){
   });
 });
 
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 $("#build-app-btn").click(function(){
   var appName = $("h1").text();
   fetch('/app/build', {
@@ -131,11 +137,26 @@ $("#build-app-btn").click(function(){
     if (res.success == true) {
       var status = 0;
       while(status != 100) {
-        $.get("/app/build/status", function(now) {
+        console.log(status)
+        $.get("/app/build/status/"+res.id, function(now) {
           if (now.status == true && now.running == true) {
             console.log("building...", status);
             status += 1;
-            
+            // 이 수정해야함!!
+            // if (status < 50) {
+            //   await sleep(1000);
+            // } else if (status < 90) {
+            //   await sleep(1500);
+            // } else {
+            //   await sleep(2000);
+            // }
+          } else if (now.status == true) {
+            status += 1;
+            await sleep(300);
+          } else {
+            console.log("ERROR");
+            status = 0;
+            break;
           }
         });
       }

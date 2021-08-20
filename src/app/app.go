@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/JungBin-Eom/DevEnvMaker-Envi/data"
@@ -34,6 +35,16 @@ type Success struct {
 type CreateSuccess struct {
 	Success bool `json:"success"`
 	Count   int  `json:"count"`
+}
+
+type BuildSuccess struct {
+	Success bool `json:"success"`
+	Id      int  `json:"id"`
+}
+
+type Status struct {
+	Status  bool `json:"status"`
+	Running bool `json:"running"`
 }
 
 var getSessionID = func(r *http.Request) int {
@@ -338,53 +349,53 @@ func (a *AppHandler) CreateAppHandler(rw http.ResponseWriter, r *http.Request) {
 		}
 		config := `
 		<flow-definition plugin="workflow-job@2.41">
-		<actions>
-		<org.jenkinsci.plugins.workflow.multibranch.JobPropertyTrackerAction plugin="workflow-multibranch@2.24">
-		<jobPropertyDescriptors>
-		<string>org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty</string>
-		</jobPropertyDescriptors>
-		</org.jenkinsci.plugins.workflow.multibranch.JobPropertyTrackerAction>
-		<org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@1.9.1"/>
-		<org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@1.9.1">
-		<jobProperties/>
-		<triggers/>
-		<parameters/>
-		<options/>
-		</org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
-		</actions>
-		<description/>
-		<keepDependencies>false</keepDependencies>
-		<properties>
-		<org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
-		<triggers>
-		<com.cloudbees.jenkins.GitHubPushTrigger plugin="github@1.34.0">
-		<spec/>
-		</com.cloudbees.jenkins.GitHubPushTrigger>
-		</triggers>
-		</org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
-		</properties>
-		<definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps@2.93">
-		<scm class="hudson.plugins.git.GitSCM" plugin="git@4.8.1">
-		<configVersion>2</configVersion>
-		<userRemoteConfigs>
-		<hudson.plugins.git.UserRemoteConfig>
-		<url>https://github.com/` + user.GithubName + `/` + newapp.Name + `</url>
-		</hudson.plugins.git.UserRemoteConfig>
-		</userRemoteConfigs>
-		<branches>
-		<hudson.plugins.git.BranchSpec>
-		<name>*/main</name>
-		</hudson.plugins.git.BranchSpec>
-		</branches>
-		<doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
-		<submoduleCfg class="empty-list"/>
-		<extensions/>
-		</scm>
-		<scriptPath>Jenkinsfile</scriptPath>
-		<lightweight>true</lightweight>
-		</definition>
-		<triggers/>
-		<disabled>false</disabled>
+			<actions>
+				<org.jenkinsci.plugins.workflow.multibranch.JobPropertyTrackerAction plugin="workflow-multibranch@2.24">
+					<jobPropertyDescriptors>
+						<string>org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty</string>
+					</jobPropertyDescriptors>
+				</org.jenkinsci.plugins.workflow.multibranch.JobPropertyTrackerAction>
+				<org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@1.9.1" />
+				<org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@1.9.1">
+					<jobProperties />
+					<triggers />
+					<parameters />
+					<options />
+				</org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
+			</actions>
+			<description />
+			<keepDependencies>false</keepDependencies>
+			<properties>
+				<org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+					<triggers>
+						<com.cloudbees.jenkins.GitHubPushTrigger plugin="github@1.34.0">
+							<spec />
+						</com.cloudbees.jenkins.GitHubPushTrigger>
+					</triggers>
+				</org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+			</properties>
+			<definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps@2.93">
+				<scm class="hudson.plugins.git.GitSCM" plugin="git@4.8.1">
+					<configVersion>2</configVersion>
+					<userRemoteConfigs>
+						<hudson.plugins.git.UserRemoteConfig>
+							<url>https://github.com/` + user.GithubName + `/` + newapp.Name + `</url>
+						</hudson.plugins.git.UserRemoteConfig>
+					</userRemoteConfigs>
+					<branches>
+						<hudson.plugins.git.BranchSpec>
+							<name>*/main</name>
+						</hudson.plugins.git.BranchSpec>
+					</branches>
+					<doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+					<submoduleCfg class="empty-list" />
+					<extensions />
+				</scm>
+				<scriptPath>Jenkinsfile</scriptPath>
+				<lightweight>true</lightweight>
+			</definition>
+			<triggers />
+			<disabled>false</disabled>
 		</flow-definition>
 		`
 
@@ -468,11 +479,6 @@ func (a *AppHandler) GetAppDetailHandler(rw http.ResponseWriter, r *http.Request
 	rd.JSON(rw, http.StatusOK, app)
 }
 
-type BuildSuccess struct {
-	Success bool `json:"success"`
-	Id      int  `json:"id"`
-}
-
 func (a *AppHandler) BuildAppHandler(rw http.ResponseWriter, r *http.Request) {
 	var app data.Application
 	decoder := json.NewDecoder(r.Body)
@@ -503,6 +509,36 @@ func (a *AppHandler) BuildAppHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	rd.JSON(rw, http.StatusOK, BuildSuccess{true, int(buildId)})
+}
+
+func (a *AppHandler) GetBuildStatusHandler(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, _ := vars["id"]
+	pw := os.Getenv("JENKINS_PW")
+
+	jenkins := gojenkins.CreateJenkins(nil, "http://jenkins.3.35.25.64.sslip.io", "admin", pw)
+	_, err := jenkins.Init(r.Context())
+
+	if err != nil {
+		panic("Something Went Wrong")
+	}
+	queueId, err := strconv.Atoi(id)
+	if err != nil {
+		http.Redirect(rw, r, "../html/404.html", http.StatusTemporaryRedirect)
+	}
+	build, err := jenkins.GetBuildFromQueueID(r.Context(), int64(queueId))
+	if err != nil {
+		rd.JSON(rw, http.StatusInternalServerError, Status{false, false})
+		return
+	}
+
+	if build.IsRunning(r.Context()) { // now running
+		rd.JSON(rw, http.StatusOK, Status{true, true})
+	} else if build.IsGood(r.Context()) { // build finish successfully
+		rd.JSON(rw, http.StatusOK, Status{true, false})
+	} else { // build error
+		rd.JSON(rw, http.StatusInternalServerError, Status{false, false})
+	}
 }
 
 // GITHUB APIs
@@ -559,6 +595,7 @@ func MakeHandler(filepath string) *AppHandler {
 	r.HandleFunc("/app", a.RemoveAppHandler).Methods("DELETE")
 	r.HandleFunc("/app/{projname:[a-zA-Z0-9]+}/{appname:[a-zA-Z0-9]+}", a.GetAppDetailHandler).Methods("GET")
 	r.HandleFunc("/app/build", a.BuildAppHandler).Methods("POST")
+	r.HandleFunc("/app/build/status/{id:[0-9]+}", a.GetBuildStatusHandler).Methods("GET")
 
 	// r.HandleFunc("/repos", a.Repository).Methods("GET")
 
