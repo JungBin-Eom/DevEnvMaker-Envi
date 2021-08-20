@@ -204,7 +204,7 @@ func (s *sqliteHandler) RegisterToken(sessionId int, token string) error {
 }
 
 func (s *sqliteHandler) CreateApp(app data.Application, sessionId int) (int, error) {
-	row, err := s.db.Query("SELECT COUNT(*) FROM applications WHERE name=?", app.Name)
+	row, err := s.db.Query("SELECT COUNT(*) FROM applications WHERE name=? AND project=?", app.Name, app.Project)
 	if err != nil {
 		panic(err)
 	}
@@ -226,7 +226,7 @@ func (s *sqliteHandler) CreateApp(app data.Application, sessionId int) (int, err
 }
 
 func (s *sqliteHandler) RemoveApp(app data.Application, sessionId int) bool {
-	row, err := s.db.Query("SELECT id FROM applications WHERE name=? AND owner=?", app.Name, sessionId)
+	row, err := s.db.Query("SELECT id FROM applications WHERE name=? AND owner=? AND project=?", app.Name, sessionId, app.Project)
 	if err != nil {
 		panic(err)
 	}

@@ -2,7 +2,6 @@ package app
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -320,6 +319,69 @@ func (a *AppHandler) CreateAppHandler(rw http.ResponseWriter, r *http.Request) {
 		}
 		res.Body.Close()
 
+		pw := os.Getenv("JENKINS_PW")
+		jenkins := gojenkins.CreateJenkins(nil, "http://jenkins.3.35.25.64.sslip.io", "admin", pw)
+		_, err = jenkins.Init(r.Context())
+
+		if err != nil {
+			panic("Something Went Wrong")
+		}
+		config := `
+		<flow-definition plugin="workflow-job@2.41">
+		<actions>
+		<org.jenkinsci.plugins.workflow.multibranch.JobPropertyTrackerAction plugin="workflow-multibranch@2.24">
+		<jobPropertyDescriptors>
+		<string>org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty</string>
+		</jobPropertyDescriptors>
+		</org.jenkinsci.plugins.workflow.multibranch.JobPropertyTrackerAction>
+		<org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@1.9.1"/>
+		<org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@1.9.1">
+		<jobProperties/>
+		<triggers/>
+		<parameters/>
+		<options/>
+		</org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
+		</actions>
+		<description/>
+		<keepDependencies>false</keepDependencies>
+		<properties>
+		<org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+		<triggers>
+		<com.cloudbees.jenkins.GitHubPushTrigger plugin="github@1.34.0">
+		<spec/>
+		</com.cloudbees.jenkins.GitHubPushTrigger>
+		</triggers>
+		</org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+		</properties>
+		<definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps@2.93">
+		<scm class="hudson.plugins.git.GitSCM" plugin="git@4.8.1">
+		<configVersion>2</configVersion>
+		<userRemoteConfigs>
+		<hudson.plugins.git.UserRemoteConfig>
+		<url>https://github.com/` + user.GithubName + `/` + newapp.Name + `</url>
+		</hudson.plugins.git.UserRemoteConfig>
+		</userRemoteConfigs>
+		<branches>
+		<hudson.plugins.git.BranchSpec>
+		<name>*/main</name>
+		</hudson.plugins.git.BranchSpec>
+		</branches>
+		<doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+		<submoduleCfg class="empty-list"/>
+		<extensions/>
+		</scm>
+		<scriptPath>Jenkinsfile</scriptPath>
+		<lightweight>true</lightweight>
+		</definition>
+		<triggers/>
+		<disabled>false</disabled>
+		</flow-definition>
+		`
+
+		_, err = jenkins.CreateJobInFolder(r.Context(), config, newapp.Name, newapp.Project)
+		if err != nil {
+			http.Redirect(rw, r, "../html/404.html", http.StatusTemporaryRedirect)
+		}
 		rd.JSON(rw, http.StatusOK, CreateSuccess{true, 0})
 	}
 }
@@ -379,19 +441,19 @@ func (a *AppHandler) BuildAppHandler(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Redirect(rw, r, "../html/404.html", http.StatusTemporaryRedirect)
 	}
-	ctx := context.Background()
-	pw := os.Getenv("JENKINS_PW")
-	jenkins := gojenkins.CreateJenkins(nil, "http://jenkins.3.35.25.64.sslip.io", "admin", pw)
-	// Provide CA certificate if server is using self-signed certificate
-	// caCert, _ := ioutil.ReadFile("/tmp/ca.crt")
-	// jenkins.Requester.CACert = caCert
-	_, err = jenkins.Init(ctx)
+	// ctx := context.Background()
+	// pw := os.Getenv("JENKINS_PW")
+	// jenkins := gojenkins.CreateJenkins(nil, "http://jenkins.3.35.25.64.sslip.io", "admin", pw)
+	// // Provide CA certificate if server is using self-signed certificate
+	// // caCert, _ := ioutil.ReadFile("/tmp/ca.crt")
+	// // jenkins.Requester.CACert = caCert
+	// _, err = jenkins.Init(ctx)
 
-	if err != nil {
-		panic("Something Went Wrong")
-	}
+	// if err != nil {
+	// 	panic("Something Went Wrong")
+	// }
 
-	_, _ = jenkins.CreateFolder(ctx, "newFolder")
+	// _, _ = jenkins.CreateFolder(ctx, "newFolder")
 	// 1. Jenkins Pipeline 생성
 	// 2. Jenkins Pipeline 실행
 
