@@ -118,10 +118,21 @@ $("#delete-app-btn").click(function(){
 });
 
 function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
+  const wakeUpTime = Date.now() + ms;
+  while (Date.now() < wakeUpTime) {}
 }
 
-$("#build-app-btn").click(function(){
+$("#build-app-btn").click(function(e){
+  e.preventDefault();
+  if ($(this).hasClass('clicked')) { 
+    return false;
+  } else {
+    $(this).addClass('clicked').trigger('click');
+  }
+
+  $("#build-progress-bar").css({'width':"0%"});
+  $("#build-progress-bar").attr('area-valuenow', '0');
+  $("#build-percent").text("0%");
   var appName = $("h1").text();
   fetch('/app/build', {
     method: 'post',
@@ -135,32 +146,65 @@ $("#build-app-btn").click(function(){
   .then(res => res.json())
   .then(res => {
     if (res.success == true) {
+      var path = res.job.split('-');
+      $("#build-detail").attr('href', 'http://jenkins.3.35.25.64.sslip.io/job/'+path[0]+'/job/'+path[1])
       var status = 0;
-      while(status != 100) {
-        console.log(status)
-        $.get("/app/build/status/"+res.id, function(now) {
-          if (now.status == true && now.running == true) {
-            console.log("building...", status);
-            status += 1;
-            // 이 수정해야함!!
-            // if (status < 50) {
-            //   await sleep(1000);
-            // } else if (status < 90) {
-            //   await sleep(1500);
-            // } else {
-            //   await sleep(2000);
-            // }
-          } else if (now.status == true) {
-            status += 1;
-            await sleep(300);
+      var running = false;
+      var ok = false;
+      var delay = 500;
+
+      function building() {         //  create a loop function
+        setTimeout(function() {   //  call a 3s setTimeout when the loop is called
+          running, ok = false;
+          console.log(status)
+          $("#build-progress-bar").css({'width':String(status)+"%"});
+          $("#build-progress-bar").attr('area-valuenow', String(status));
+          $("#build-percent").text(String(status)+"%");
+          if (status <= 20) {
+            $("#build-progress-bar").attr('class', 'progress-bar bg-danger');
+          } else if (status <= 50) {
+            $("#build-progress-bar").attr('class', 'progress-bar bg-warning');
           } else {
-            console.log("ERROR");
-            status = 0;
-            break;
+            $("#build-progress-bar").attr('class', 'progress-bar bg-success');
           }
-        });
+          $.ajax({
+            async: false,
+            type: 'GET',
+            url: "/app/build/status/"+res.job+"/"+res.id,
+            success: function(now) {
+              if (now.status == true && now.running == true) {
+                running, ok = true;
+                if (status >= 70) {
+                  delay = 3000;
+                } else if (status >= 80) {
+                  delay = 4000;
+                } else if (status >= 90) {
+                  delay = 5000;
+                }
+              } else if (now.status == true) {
+                ok = true;
+                status = 99;
+              } else {
+                console.log("ERROR");
+                status = 100;
+                delay = 0;
+              }
+            }
+          });
+          status++;
+          if (status <= 100) { 
+            building();
+          } 
+        }, delay)
       }
-      alert("OK")
+      
+      building();
+
+      if (running == false && ok == false) {
+        $("#build-progress-bar").css({'width':'0%'});
+        $("#build-progress-bar").attr('area-valuenow', '0');
+        $("#build-percent").text("ERROR!");
+      }
     } else {
       location.href = "/html/404.html"
     }

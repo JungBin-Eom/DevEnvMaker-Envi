@@ -38,8 +38,9 @@ type CreateSuccess struct {
 }
 
 type BuildSuccess struct {
-	Success bool `json:"success"`
-	Id      int  `json:"id"`
+	Success bool   `json:"success"`
+	Id      int    `json:"id"`
+	Job     string `json:"job"`
 }
 
 type Status struct {
@@ -503,17 +504,32 @@ func (a *AppHandler) BuildAppHandler(rw http.ResponseWriter, r *http.Request) {
 		panic("Something Went Wrong")
 	}
 	jobName := app.Project + "/job/" + app.Name
-	buildId, err := jenkins.BuildJob(r.Context(), jobName, nil)
+	_, err = jenkins.BuildJob(r.Context(), jobName, nil)
 	if err != nil {
 		rd.JSON(rw, http.StatusInternalServerError, Success{false})
+		return
 	}
-
-	rd.JSON(rw, http.StatusOK, BuildSuccess{true, int(buildId)})
+	// count := 0
+	before, _ := jenkins.GetAllBuildIds(r.Context(), jobName)
+	after, _ := jenkins.GetAllBuildIds(r.Context(), jobName)
+	for {
+		after, _ = jenkins.GetAllBuildIds(r.Context(), jobName)
+		if len(before) == 0 && len(after) != 0 {
+			break
+		} else if len(before) != len(after) {
+			break
+		}
+	}
+	rd.JSON(rw, http.StatusOK, BuildSuccess{true, int(after[0].Number), app.Project + "-" + app.Name})
 }
 
 func (a *AppHandler) GetBuildStatusHandler(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, _ := vars["id"]
+	job, _ := vars["job"]
+
+	path := strings.Split(job, "-")
+	jobName := path[0] + "/job/" + path[1]
 	pw := os.Getenv("JENKINS_PW")
 
 	jenkins := gojenkins.CreateJenkins(nil, "http://jenkins.3.35.25.64.sslip.io", "admin", pw)
@@ -522,12 +538,13 @@ func (a *AppHandler) GetBuildStatusHandler(rw http.ResponseWriter, r *http.Reque
 	if err != nil {
 		panic("Something Went Wrong")
 	}
-	queueId, err := strconv.Atoi(id)
+	buildId, err := strconv.Atoi(id)
 	if err != nil {
 		http.Redirect(rw, r, "../html/404.html", http.StatusTemporaryRedirect)
 	}
-	build, err := jenkins.GetBuildFromQueueID(r.Context(), int64(queueId))
+	build, err := jenkins.GetBuild(r.Context(), jobName, int64(buildId))
 	if err != nil {
+		fmt.Println("Can't get build")
 		rd.JSON(rw, http.StatusInternalServerError, Status{false, false})
 		return
 	}
@@ -537,7 +554,7 @@ func (a *AppHandler) GetBuildStatusHandler(rw http.ResponseWriter, r *http.Reque
 	} else if build.IsGood(r.Context()) { // build finish successfully
 		rd.JSON(rw, http.StatusOK, Status{true, false})
 	} else { // build error
-		rd.JSON(rw, http.StatusInternalServerError, Status{false, false})
+		rd.JSON(rw, http.StatusOK, Status{false, false})
 	}
 }
 
@@ -593,9 +610,9 @@ func MakeHandler(filepath string) *AppHandler {
 	r.HandleFunc("/app", a.GetAppsHandler).Methods("GET")
 	r.HandleFunc("/app", a.CreateAppHandler).Methods("POST")
 	r.HandleFunc("/app", a.RemoveAppHandler).Methods("DELETE")
-	r.HandleFunc("/app/{projname:[a-zA-Z0-9]+}/{appname:[a-zA-Z0-9]+}", a.GetAppDetailHandler).Methods("GET")
+	r.HandleFunc("/app/{projname:[a-zA-Z0-9]+}/{appname:[a-zA-Z0-9]+}", a.GetAppDetailHandler).Methods("GET")
 	r.HandleFunc("/app/build", a.BuildAppHandler).Methods("POST")
-	r.HandleFunc("/app/build/status/{id:[0-9]+}", a.GetBuildStatusHandler).Methods("GET")
+	r.HandleFunc("/app/build/status/{job:[a-zA-Z0-9-]+}/{id:[0-9]+}", a.GetBuildStatusHandler).Methods("GET")
 
 	// r.HandleFunc("/repos", a.Repository).Methods("GET")
 
