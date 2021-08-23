@@ -234,9 +234,51 @@ func (a *AppHandler) CreateProjectHandler(rw http.ResponseWriter, r *http.Reques
 		jenkins.CreateFolder(r.Context(), newprj.Name)
 
 		// ArgoCD project create
+		argocdPrjTemplate := `{
+			"project": {
+					"metadata": { 
+							"name": "` + newprj.Name + `"
+					},
+					"spec": {
+							"description": "` + newprj.Description + `",
+							"destinations": [
+									{
+									"server": "https://kubernetes.default.svc",
+									"namespace": "` + newprj.Name + `"
+									}
+							],
+							"clusterResourceWhitelist": [
+									{
+											"group": "*",
+											"kind": "*"
+									}
+							],
+							"sourceRepos": ["*"]
+					}
+			},
+			"upsert": true
+		}`
 
-		// pbytes, _ := json.Marshal(newprj)
-		// buff := bytes.NewBuffer(pbytes)
+		buff := bytes.NewBuffer([]byte(argocdPrjTemplate))
+		argocdToken := os.Getenv("ARGOCD_TOKEN")
+		req, err := http.NewRequest("POST", "https://3.35.25.64:31286/api/v1/projects", buff)
+		if err != nil {
+			rd.JSON(rw, http.StatusOK, CreateSuccess{false, 0})
+			return
+		}
+		req.Header.Set("Authorization", "Bearer "+argocdToken)
+
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			rd.JSON(rw, http.StatusOK, CreateSuccess{false, 0})
+			return
+		}
+		defer res.Body.Close()
+
+		// mybody, err := ioutil.ReadAll(res.Body)
+		// if err != nil {
+		// 	http.Error(rw, "Unable to read body", http.StatusBadRequest)
+		// }
 
 		// req, err := http.NewRequest("POST", "https://api.github.com/user/repos", buff)
 		// if err != nil {
@@ -281,6 +323,19 @@ func (a *AppHandler) RemoveProjectHandler(rw http.ResponseWriter, r *http.Reques
 		if err != nil || deleteFolder == false {
 			rd.JSON(rw, http.StatusOK, Success{false})
 		} else {
+			argocdToken := os.Getenv("ARGOCD_TOKEN")
+			req, err := http.NewRequest("DELETE", "https://3.35.25.64:31286/api/v1/projects/"+project.Name, nil)
+			if err != nil {
+				rd.JSON(rw, http.StatusOK, Success{false})
+				return
+			}
+			req.Header.Set("Authorization", "Bearer "+argocdToken)
+
+			_, err = http.DefaultClient.Do(req)
+			if err != nil {
+				rd.JSON(rw, http.StatusOK, Success{false})
+				return
+			}
 			rd.JSON(rw, http.StatusOK, Success{true})
 		}
 	} else {
