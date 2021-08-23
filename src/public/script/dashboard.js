@@ -117,11 +117,6 @@ $("#delete-app-btn").click(function(){
   });
 });
 
-function sleep(ms) {
-  const wakeUpTime = Date.now() + ms;
-  while (Date.now() < wakeUpTime) {}
-}
-
 $("#build-app-btn").click(function(e){
   e.preventDefault();
   if ($(this).hasClass('clicked')) { 

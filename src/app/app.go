@@ -154,6 +154,7 @@ func (a *AppHandler) UserRegisterHandler(rw http.ResponseWriter, r *http.Request
 
 func (a *AppHandler) RegisterTokenHandler(rw http.ResponseWriter, r *http.Request) {
 	sessionId := getSessionID(r)
+	githubName := getSessionName(r)
 	type Token struct {
 		Token string `json:"token"`
 	}
@@ -161,13 +162,36 @@ func (a *AppHandler) RegisterTokenHandler(rw http.ResponseWriter, r *http.Reques
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&token)
 	if err != nil {
-		http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
+		rd.JSON(rw, http.StatusInternalServerError, Success{false})
+		return
 	}
 	err = a.db.RegisterToken(sessionId, token.Token)
 	if err != nil {
-		http.Redirect(rw, r, "/html/404.html", http.StatusBadRequest)
+		rd.JSON(rw, http.StatusInternalServerError, Success{false})
+		return
 	}
-	rd.JSON(rw, http.StatusOK, Success{Success: true})
+
+	req, err := http.NewRequest("POST", "https://api.github.com/repos/Ricky-Envi/Envi-ArgoCD/forks", nil)
+	if err != nil {
+		rd.JSON(rw, http.StatusInternalServerError, Success{false})
+		return
+	}
+	req.Header.Set("content-type", "application/json")
+	req.Header.Set("authorization", "token "+token.Token)
+	req.Header.Set("user-agent", githubName)
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		rd.JSON(rw, http.StatusInternalServerError, Success{false})
+		return
+	}
+	_, err = ioutil.ReadAll(res.Body)
+	if err != nil {
+		rd.JSON(rw, http.StatusInternalServerError, Success{false})
+		return
+	}
+	res.Body.Close()
+	rd.JSON(rw, http.StatusOK, Success{true})
 }
 
 // PROJECT APIs
@@ -208,6 +232,8 @@ func (a *AppHandler) CreateProjectHandler(rw http.ResponseWriter, r *http.Reques
 		}
 
 		jenkins.CreateFolder(r.Context(), newprj.Name)
+
+		// ArgoCD project create
 
 		// pbytes, _ := json.Marshal(newprj)
 		// buff := bytes.NewBuffer(pbytes)
@@ -558,6 +584,49 @@ func (a *AppHandler) GetBuildStatusHandler(rw http.ResponseWriter, r *http.Reque
 	}
 }
 
+func (a *AppHandler) DeployAppHandler(rw http.ResponseWriter, r *http.Request) {
+	var app data.Application
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&app)
+	if err != nil {
+		http.Redirect(rw, r, "../html/404.html", http.StatusTemporaryRedirect)
+	}
+	sessionId := getSessionID(r)
+	apps := a.db.GetAppList(sessionId)
+	for _, item := range apps {
+		if item.Name == app.Name {
+			app.Project = item.Project
+			break
+		}
+	}
+
+	pw := os.Getenv("JENKINS_PW")
+	jenkins := gojenkins.CreateJenkins(nil, "http://jenkins.3.35.25.64.sslip.io", "admin", pw)
+	_, err = jenkins.Init(r.Context())
+
+	if err != nil {
+		panic("Something Went Wrong")
+	}
+	jobName := app.Project + "/job/" + app.Name
+	_, err = jenkins.BuildJob(r.Context(), jobName, nil)
+	if err != nil {
+		rd.JSON(rw, http.StatusInternalServerError, Success{false})
+		return
+	}
+	// count := 0
+	before, _ := jenkins.GetAllBuildIds(r.Context(), jobName)
+	after, _ := jenkins.GetAllBuildIds(r.Context(), jobName)
+	for {
+		after, _ = jenkins.GetAllBuildIds(r.Context(), jobName)
+		if len(before) == 0 && len(after) != 0 {
+			break
+		} else if len(before) != len(after) {
+			break
+		}
+	}
+	rd.JSON(rw, http.StatusOK, BuildSuccess{true, int(after[0].Number), app.Project + "-" + app.Name})
+}
+
 // GITHUB APIs
 func (a *AppHandler) GetGitHubNameHandler(rw http.ResponseWriter, r *http.Request) {
 	githubName := getSessionName(r)
@@ -613,6 +682,8 @@ func MakeHandler(filepath string) *AppHandler {
 	r.HandleFunc("/app/{projname:[a-zA-Z0-9]+}/{appname:[a-zA-Z0-9]+}", a.GetAppDetailHandler).Methods("GET")
 	r.HandleFunc("/app/build", a.BuildAppHandler).Methods("POST")
 	r.HandleFunc("/app/build/status/{job:[a-zA-Z0-9-]+}/{id:[0-9]+}", a.GetBuildStatusHandler).Methods("GET")
+	r.HandleFunc("/app/deploy", a.DeployAppHandler).Methods("POST")
+	// r.HandleFunc("/app/build/status/{job:[a-zA-Z0-9-]+}/{id:[0-9]+}", a.GetBuildStatusHandler).Methods("GET")
 
 	// r.HandleFunc("/repos", a.Repository).Methods("GET")
 
