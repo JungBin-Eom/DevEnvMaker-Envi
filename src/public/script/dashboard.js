@@ -85,7 +85,7 @@ $("#createapplication").click(function(){
     .then(res => {
       if (res.success == true) {
         alert("애플리케이션 생성 완료!");
-        location.href=document.referrer;
+        location.href="/";
       } else {
         location.href="/html/404.html"
       }
@@ -117,6 +117,7 @@ $("#delete-app-btn").click(function(){
   });
 });
 
+// build app
 $("#build-app-btn").click(function(e){
   e.preventDefault();
   if ($(this).hasClass('clicked')) { 
@@ -151,7 +152,6 @@ $("#build-app-btn").click(function(e){
       function building() {         //  create a loop function
         setTimeout(function() {   //  call a 3s setTimeout when the loop is called
           running, ok = false;
-          console.log(status)
           $("#build-progress-bar").css({'width':String(status)+"%"});
           $("#build-progress-bar").attr('area-valuenow', String(status));
           $("#build-percent").text(String(status)+"%");
@@ -161,6 +161,9 @@ $("#build-app-btn").click(function(e){
             $("#build-progress-bar").attr('class', 'progress-bar bg-warning');
           } else {
             $("#build-progress-bar").attr('class', 'progress-bar bg-success');
+          }
+          if (status == 100) {
+            return
           }
           $.ajax({
             async: false,
@@ -181,8 +184,10 @@ $("#build-app-btn").click(function(e){
                 status = 99;
               } else {
                 console.log("ERROR");
-                status = 100;
-                delay = 0;
+                $("#build-progress-bar").css({'width':'0%'});
+                $("#build-progress-bar").attr('area-valuenow', '0');
+                $("#build-percent").text("ERROR!");
+                return;
               }
             }
           });
@@ -199,6 +204,97 @@ $("#build-app-btn").click(function(e){
         $("#build-progress-bar").css({'width':'0%'});
         $("#build-progress-bar").attr('area-valuenow', '0');
         $("#build-percent").text("ERROR!");
+      }
+    } else {
+      location.href = "/html/404.html"
+    }
+  });
+});
+
+// deploy app
+$("#deploy-app-btn").click(function(e){
+  e.preventDefault();
+  if ($(this).hasClass('clicked')) { 
+    return false;
+  } else {
+    $(this).addClass('clicked').trigger('click');
+  }
+
+  $("#deploy-progress-bar").css({'width':"0%"});
+  $("#deploy-progress-bar").attr('area-valuenow', '0');
+  $("#deploy-percent").text("0%");
+  var appName = $("h1").text();
+  fetch('/app/deploy', {
+    method: 'post',
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+        name: appName,
+      })
+  })
+  .then(res => res.json())
+  .then(res => {
+    if (res.success == true) {
+      // 여기부터 수정
+      $("#deploy-detail").attr('href', 'https://3.35.25.64:31286/applications/'+appName)
+      var status = 0;
+      var running = false;
+      var ok = false;
+      var delay = 500;
+
+      function deploying() {         //  create a loop function
+        setTimeout(function() {   //  call a 3s setTimeout when the loop is called
+          running, ok = false;
+          $("#deploy-progress-bar").css({'width':String(status)+"%"});
+          $("#deploy-progress-bar").attr('area-valuenow', String(status));
+          $("#deploy-percent").text(String(status)+"%");
+          if (status <= 20) {
+            $("#deploy-progress-bar").attr('class', 'progress-bar bg-danger');
+          } else if (status <= 50) {
+            $("#deploy-progress-bar").attr('class', 'progress-bar bg-warning');
+          } else {
+            $("#deploy-progress-bar").attr('class', 'progress-bar bg-success');
+          }
+          $.ajax({
+            async: false,
+            type: 'GET',
+            url: "/app/deploy/status/"+appName,
+            success: function(now) {
+              if (now.status == true && now.running == true) {
+                running, ok = true;
+                if (status >= 70) {
+                  delay = 3000;
+                } else if (status >= 80) {
+                  delay = 4000;
+                } else if (status >= 90) {
+                  delay = 5000;
+                }
+              } else if (now.status == true) {
+                ok = true;
+                status = 99;
+              } else {
+                console.log("ERROR");
+                $("#deploy-progress-bar").css({'width':'0%'});
+                $("#deploy-progress-bar").attr('area-valuenow', '0');
+                $("#deploy-percent").text("ERROR!");
+                return;
+              }
+            }
+          });
+          status++;
+          if (status <= 100) { 
+            deploying();
+          } 
+        }, delay)
+      }
+      
+      deploying();
+
+      if (running == false && ok == false) {
+        $("#deploy-progress-bar").css({'width':'0%'});
+        $("#deploy-progress-bar").attr('area-valuenow', '0');
+        $("#deploy-percent").text("ERROR!");
       }
     } else {
       location.href = "/html/404.html"

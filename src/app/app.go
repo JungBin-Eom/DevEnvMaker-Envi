@@ -238,37 +238,40 @@ func (a *AppHandler) CreateProjectHandler(rw http.ResponseWriter, r *http.Reques
 		// ArgoCD project create
 		argocdPrjTemplate := `{
 			"project": {
-					"metadata": { 
-							"name": "` + newprj.Name + `"
-					},
-					"spec": {
-							"description": "` + newprj.Description + `",
-							"destinations": [
-									{
-									"server": "https://kubernetes.default.svc",
-									"namespace": "` + newprj.Name + `"
-									}
-							],
-							"clusterResourceWhitelist": [
-									{
-											"group": "*",
-											"kind": "*"
-									}
-							],
-							"sourceRepos": ["*"]
-					}
+				"metadata": { 
+					"name": "` + newprj.Name + `"
+				},
+				"spec": {
+					"description": "` + newprj.Description + `",
+					"destinations": [
+						{
+						"server": "https://kubernetes.default.svc",
+						"namespace": "*"
+						}
+					],
+					"clusterResourceWhitelist": [
+						{
+							"group": "*",
+							"kind": "*"
+						}
+					],
+					"sourceRepos": ["*"]
+				}
 			},
 			"upsert": true
 		}`
 
+		cmd := exec.Command("/bin/sh", "-c", "curl -XPOST https://3.35.25.64:31286/api/v1/session -d $'{\"username\":\"admin\",\"password\":\""+os.Getenv("ARGOCD_PW")+"\"}' -k")
+		output, _ := cmd.Output()
+		var argoToken argocdToken
+		json.Unmarshal(output, &argoToken)
 		buff := bytes.NewBuffer([]byte(argocdPrjTemplate))
-		argocdToken := os.Getenv("ARGOCD_TOKEN")
 		req, err := http.NewRequest("POST", "https://3.35.25.64:31286/api/v1/projects", buff)
 		if err != nil {
 			rd.JSON(rw, http.StatusOK, CreateSuccess{false, 0})
 			return
 		}
-		req.Header.Set("Authorization", "Bearer "+argocdToken)
+		req.Header.Set("Authorization", "Bearer "+argoToken.Token)
 
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
@@ -304,24 +307,29 @@ func (a *AppHandler) RemoveProjectHandler(rw http.ResponseWriter, r *http.Reques
 		if err != nil || deleteFolder == false {
 			rd.JSON(rw, http.StatusOK, Success{false})
 		} else {
-			// remove argocd project
-			argocdToken := os.Getenv("ARGOCD_TOKEN")
-			req, err := http.NewRequest("DELETE", "https://3.35.25.64:31286/api/v1/projects/"+project.Name, nil)
-			if err != nil {
-				rd.JSON(rw, http.StatusOK, Success{false})
-				return
-			}
-			req.Header.Set("Authorization", "Bearer "+argocdToken)
+			// get argocd token
+			cmd := exec.Command("/bin/sh", "-c", "curl -XPOST https://3.35.25.64:31286/api/v1/session -d $'{\"username\":\"admin\",\"password\":\""+os.Getenv("ARGOCD_PW")+"\"}' -k")
+			output, _ := cmd.Output()
+			var argoToken argocdToken
+			json.Unmarshal(output, &argoToken)
 
-			_, err = http.DefaultClient.Do(req)
-			if err != nil {
-				rd.JSON(rw, http.StatusOK, Success{false})
-				return
-			}
 			appList := a.db.GetAppList(sessionId)
 			for _, app := range appList {
 				if app.Project == project.Name {
-					req, err := http.NewRequest("DELETE", "https://api.github.com/repos/"+user.GithubName+"/"+app.Name, nil)
+					req, err := http.NewRequest("DELETE", "https://3.35.25.64:31286/api/v1/applications/"+app.Name, nil)
+					if err != nil {
+						rd.JSON(rw, http.StatusOK, Success{false})
+						return
+					}
+					req.Header.Set("Authorization", "Bearer "+argoToken.Token)
+
+					_, err = http.DefaultClient.Do(req)
+					if err != nil {
+						rd.JSON(rw, http.StatusOK, Success{false})
+						return
+					}
+
+					req, err = http.NewRequest("DELETE", "https://api.github.com/repos/"+user.GithubName+"/"+app.Name, nil)
 					if err != nil {
 						rd.JSON(rw, http.StatusInternalServerError, Success{false})
 						return
@@ -330,19 +338,39 @@ func (a *AppHandler) RemoveProjectHandler(rw http.ResponseWriter, r *http.Reques
 					req.Header.Set("authorization", "token "+user.GithubToken)
 					req.Header.Set("user-agent", user.GithubName)
 
-					res, err := http.DefaultClient.Do(req)
+					_, err = http.DefaultClient.Do(req)
 					if err != nil {
-						fmt.Println("github api error")
 						rd.JSON(rw, http.StatusBadRequest, Success{false})
 						return
 					}
-					_, err = ioutil.ReadAll(res.Body)
-					if err != nil {
-						http.Error(rw, "Unable to read body", http.StatusBadRequest)
-					}
-					res.Body.Close()
 				}
 			}
+			req, err := http.NewRequest("DELETE", "https://3.35.25.64:31286/api/v1/applications/appofapps", nil)
+			if err != nil {
+				rd.JSON(rw, http.StatusOK, Success{false})
+				return
+			}
+			req.Header.Set("Authorization", "Bearer "+argoToken.Token)
+
+			_, err = http.DefaultClient.Do(req)
+			if err != nil {
+				rd.JSON(rw, http.StatusOK, Success{false})
+				return
+			}
+
+			req, err = http.NewRequest("DELETE", "https://3.35.25.64:31286/api/v1/projects/"+project.Name, nil)
+			if err != nil {
+				rd.JSON(rw, http.StatusOK, Success{false})
+				return
+			}
+			req.Header.Set("Authorization", "Bearer "+argoToken.Token)
+
+			_, err = http.DefaultClient.Do(req)
+			if err != nil {
+				rd.JSON(rw, http.StatusOK, Success{false})
+				return
+			}
+
 			rd.JSON(rw, http.StatusOK, Success{true})
 		}
 	} else {
@@ -502,7 +530,6 @@ func (a *AppHandler) CreateAppHandler(rw http.ResponseWriter, r *http.Request) {
 				if len(fileInfo) == 2 {
 					fileType := fileInfo[1]
 					fileName := strings.Split(fileInfo[0], " ")[0]
-					fmt.Println(fileName)
 					if fileType != "directory\n" {
 						if fileName == "Jenkinsfile" || fileName == "values.yaml" {
 							fileByte, err := ioutil.ReadFile(tempDirPath + path + "/" + fileName)
@@ -512,7 +539,6 @@ func (a *AppHandler) CreateAppHandler(rw http.ResponseWriter, r *http.Request) {
 							fileContent := string(fileByte)
 							fileContent = strings.Replace(fileContent, "<GITHUB_URL>", "https://github.com/"+user.GithubName+"/"+newapp.Name, -1)
 							fileContent = strings.Replace(fileContent, "<APP_NAME>", newapp.Name, -1)
-							fmt.Println(fileContent)
 							err = ioutil.WriteFile(tempDirPath+path+"/"+fileName, []byte(fileContent), 0)
 							if err != nil {
 								fmt.Println(err.Error())
@@ -528,18 +554,13 @@ func (a *AppHandler) CreateAppHandler(rw http.ResponseWriter, r *http.Request) {
 						content := base64.StdEncoding.EncodeToString(fileByte)
 						uploadFile.Content = strings.Trim(content, " ")
 						uploadFile.Message = "Upload " + fileName + " via ENVI"
-						fmt.Println(uploadFile)
 						fbytes, _ := json.Marshal(uploadFile)
 						buff := bytes.NewBuffer(fbytes)
 						req, _ = http.NewRequest("PUT", "https://api.github.com/repos/"+user.GithubName+"/"+newapp.Name+"/contents"+path+"/"+fileName, buff)
 						req.Header.Set("content-type", "application/json")
 						req.Header.Set("authorization", "token "+user.GithubToken)
 						req.Header.Set("user-agent", user.GithubName)
-						_, err = http.DefaultClient.Do(req)
-						if err != nil {
-							fmt.Println(err.Error())
-							rd.JSON(rw, http.StatusOK, Success{false})
-						}
+						_, _ = http.DefaultClient.Do(req)
 					} else {
 						cmd = exec.Command("ls")
 						cmd.Dir = tempDirPath + path + "/" + fileName
@@ -549,7 +570,6 @@ func (a *AppHandler) CreateAppHandler(rw http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
-			return
 		}
 
 		upload(contentList, "")
@@ -616,7 +636,7 @@ func (a *AppHandler) CreateAppHandler(rw http.ResponseWriter, r *http.Request) {
 
 		_, err = jenkins.CreateJobInFolder(r.Context(), config, newapp.Name, newapp.Project)
 		if err != nil {
-			http.Redirect(rw, r, "../html/404.html", http.StatusTemporaryRedirect)
+			rd.JSON(rw, http.StatusOK, CreateSuccess{false, 0})
 		}
 		rd.JSON(rw, http.StatusOK, CreateSuccess{true, 0})
 	}
@@ -699,7 +719,8 @@ func (a *AppHandler) BuildAppHandler(rw http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&app)
 	if err != nil {
-		http.Redirect(rw, r, "../html/404.html", http.StatusTemporaryRedirect)
+		rd.JSON(rw, http.StatusInternalServerError, Success{false})
+		return
 	}
 	sessionId := getSessionID(r)
 	apps := a.db.GetAppList(sessionId)
@@ -772,47 +793,89 @@ func (a *AppHandler) GetBuildStatusHandler(rw http.ResponseWriter, r *http.Reque
 	}
 }
 
+type argocdToken struct {
+	Token string `json:"token"`
+}
+
 func (a *AppHandler) DeployAppHandler(rw http.ResponseWriter, r *http.Request) {
 	var app data.Application
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&app)
 	if err != nil {
-		http.Redirect(rw, r, "../html/404.html", http.StatusTemporaryRedirect)
+		rd.JSON(rw, http.StatusInternalServerError, Success{false})
+		return
 	}
 	sessionId := getSessionID(r)
+	user, _ := a.db.UserInfo(sessionId)
 	apps := a.db.GetAppList(sessionId)
 	for _, item := range apps {
 		if item.Name == app.Name {
 			app.Project = item.Project
+			app.Description = item.Description
 			break
 		}
 	}
 
-	pw := os.Getenv("JENKINS_PW")
-	jenkins := gojenkins.CreateJenkins(nil, "http://jenkins.3.35.25.64.sslip.io", "admin", pw)
-	_, err = jenkins.Init(r.Context())
-
-	if err != nil {
-		panic("Something Went Wrong")
+	argocdAppTemplate := `
+	{
+		"apiVersion": "argoproj.io/v1alpha1",
+		"kind": "Application",
+		"metadata": { 
+			"name": "appofapps"
+		},
+		"spec": {
+			"destination": {
+				"name": "",
+				"namespace": "` + app.Project + `",
+				"server": "https://kubernetes.default.svc"
+			},
+			"source": {
+				"path": "AppOfApps",
+				"repoURL": "https://github.com/` + user.GithubName + `/Envi-ArgoCD",
+				"targetRevision": "HEAD",
+				"helm": { 
+					"valueFiles": ["values.yaml"] 
+				}
+			},
+			"project": "` + app.Project + `",
+			"syncPolicy": {
+				"automated": {
+					"prune": true,
+					"selfHeal": true
+				},
+				"syncOptions": [
+					"CreateNamespace=true"
+				]
+			}
+		}
 	}
-	jobName := app.Project + "/job/" + app.Name
-	_, err = jenkins.BuildJob(r.Context(), jobName, nil)
+	`
+
+	cmd := exec.Command("/bin/sh", "-c", "curl -XPOST https://3.35.25.64:31286/api/v1/session -d $'{\"username\":\"admin\",\"password\":\""+os.Getenv("ARGOCD_PW")+"\"}' -k")
+	output, _ := cmd.Output()
+	var argoToken argocdToken
+	json.Unmarshal(output, &argoToken)
+
+	buff := bytes.NewBuffer([]byte(argocdAppTemplate))
+	req, err := http.NewRequest("POST", "https://3.35.25.64:31286/api/v1/applications", buff)
 	if err != nil {
-		rd.JSON(rw, http.StatusInternalServerError, Success{false})
+		rd.JSON(rw, http.StatusOK, Success{false})
 		return
 	}
-	// count := 0
-	before, _ := jenkins.GetAllBuildIds(r.Context(), jobName)
-	after, _ := jenkins.GetAllBuildIds(r.Context(), jobName)
-	for {
-		after, _ = jenkins.GetAllBuildIds(r.Context(), jobName)
-		if len(before) == 0 && len(after) != 0 {
-			break
-		} else if len(before) != len(after) {
-			break
-		}
+	req.Header.Set("Authorization", "Bearer "+argoToken.Token)
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		rd.JSON(rw, http.StatusOK, Success{false})
+		return
 	}
-	rd.JSON(rw, http.StatusOK, BuildSuccess{true, int(after[0].Number), app.Project + "-" + app.Name})
+	defer res.Body.Close()
+
+	rd.JSON(rw, http.StatusOK, Success{true})
+}
+
+func (a *AppHandler) GetDeployStatusHandler(rw http.ResponseWriter, r *http.Request) {
+	rd.JSON(rw, http.StatusOK, Status{true, true})
 }
 
 // GITHUB APIs
@@ -871,7 +934,7 @@ func MakeHandler(filepath string) *AppHandler {
 	r.HandleFunc("/app/build", a.BuildAppHandler).Methods("POST")
 	r.HandleFunc("/app/build/status/{job:[a-zA-Z0-9-]+}/{id:[0-9]+}", a.GetBuildStatusHandler).Methods("GET")
 	r.HandleFunc("/app/deploy", a.DeployAppHandler).Methods("POST")
-	// r.HandleFunc("/app/build/status/{job:[a-zA-Z0-9-]+}/{id:[0-9]+}", a.GetBuildStatusHandler).Methods("GET")
+	r.HandleFunc("/app/deploy/status/{appname:[a-zA-Z0-9]+}", a.GetDeployStatusHandler).Methods("GET")
 
 	// r.HandleFunc("/repos", a.Repository).Methods("GET")
 
