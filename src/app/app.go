@@ -425,7 +425,7 @@ func (a *AppHandler) CreateAppHandler(rw http.ResponseWriter, r *http.Request) {
 		}
 		res.Body.Close()
 
-		var values data.ValuesResponse
+		var values data.Values
 		json.Unmarshal(getValuesRes, &values)
 
 		valDec, _ := base64.StdEncoding.DecodeString(values.Content)
@@ -454,68 +454,105 @@ func (a *AppHandler) CreateAppHandler(rw http.ResponseWriter, r *http.Request) {
 			rd.JSON(rw, http.StatusOK, Success{false})
 		}
 
+		tempDirPath := "/Users/ricky/Desktop/2021/Envi-Temp"
+
 		cmd := exec.Command("curl", "-LJO", "https://api.github.com/repos/Ricky-Envi/Envi-"+newapp.Runtime+"/tarball")
-		cmd.Dir = "/Users/ricky/Desktop/2021/Envi-Temp"
+		cmd.Dir = tempDirPath
 		cmd.Run()
 
 		cmd = exec.Command("/bin/sh", "-c", "tar -xvzf Ricky-Envi-*")
-		cmd.Dir = "/Users/ricky/Desktop/2021/Envi-Temp"
+		cmd.Dir = tempDirPath
 		cmd.Run()
 
 		cmd = exec.Command("/bin/sh", "-c", "rm -rf Ricky-Envi-*.tar.gz")
-		cmd.Dir = "/Users/ricky/Desktop/2021/Envi-Temp"
+		cmd.Dir = tempDirPath
 		cmd.Run()
 
 		cmd = exec.Command("mkdir", "temp")
-		cmd.Dir = "/Users/ricky/Desktop/2021/Envi-Temp"
+		cmd.Dir = tempDirPath
 		cmd.Run()
 
 		cmd = exec.Command("/bin/sh", "-c", "cp -rf Ricky-Envi-*/* temp")
-		cmd.Dir = "/Users/ricky/Desktop/2021/Envi-Temp"
+		cmd.Dir = tempDirPath
 		cmd.Run()
 
 		cmd = exec.Command("/bin/sh", "-c", "rm -rf Ricky-Envi-*")
-		cmd.Dir = "/Users/ricky/Desktop/2021/Envi-Temp"
+		cmd.Dir = tempDirPath
 		cmd.Run()
 
 		// git code download
 		cmd = exec.Command("ls")
-		cmd.Dir = "/Users/ricky/Desktop/2021/Envi-Temp/temp"
+		tempDirPath += "/temp"
+		cmd.Dir = tempDirPath
 		contents, _ := cmd.Output()
 		contentList := strings.Split(string(contents), "\n")
 
-		// var files map[string]string
-		for _, cont := range contentList {
-			cmd = exec.Command("file", cont)
-			cmd.Dir = "/Users/ricky/Desktop/2021/Envi-Temp/temp"
-			output, _ := cmd.Output()
-			fileInfo := strings.Split(string(output), ": ")
-			fmt.Println(fileInfo)
-			if len(fileInfo) == 2 {
-				fileType := fileInfo[1]
-				if fileType != "directory\n" {
+		var upload func(contentList []string, path string)
+
+		upload = func(contentList []string, path string) {
+			for _, cont := range contentList {
+				cmd = exec.Command("file", cont)
+				if path != "" {
+					cmd.Dir = tempDirPath + path
+				} else {
+					cmd.Dir = tempDirPath
+				}
+				output, _ := cmd.Output()
+				fileInfo := strings.Split(string(output), ": ")
+				if len(fileInfo) == 2 {
+					fileType := fileInfo[1]
 					fileName := strings.Split(fileInfo[0], " ")[0]
 					fmt.Println(fileName)
-					if fileName == "Jenkinsfile" {
-						fileByte, err := ioutil.ReadFile("/Users/ricky/Desktop/2021/Envi-Temp/temp/" + fileName)
-						if err != nil {
-							fmt.Println(err.Error())
+					if fileType != "directory\n" {
+						if fileName == "Jenkinsfile" || fileName == "values.yaml" {
+							fileByte, err := ioutil.ReadFile(tempDirPath + path + "/" + fileName)
+							if err != nil {
+								fmt.Println(err.Error())
+							}
+							fileContent := string(fileByte)
+							fileContent = strings.Replace(fileContent, "<GITHUB_URL>", "https://github.com/"+user.GithubName+"/"+newapp.Name, -1)
+							fileContent = strings.Replace(fileContent, "<APP_NAME>", newapp.Name, -1)
+							fmt.Println(fileContent)
+							err = ioutil.WriteFile(tempDirPath+path+"/"+fileName, []byte(fileContent), 0)
+							if err != nil {
+								fmt.Println(err.Error())
+							}
 						}
-						fileContent := string(fileByte)
-						fileContent = strings.Replace(fileContent, "<GITHUB_URL>", "https://github.com/"+user.GithubName+"/"+newapp.Name, -1)
-						fileContent = strings.Replace(fileContent, "<APP_NAME>", newapp.Name, -1)
-						fmt.Println(fileContent)
-						err = ioutil.WriteFile("/Users/ricky/Desktop/2021/Envi-Temp/temp/"+fileName, []byte(fileContent), 0)
-						if err != nil {
-							fmt.Println(err.Error())
-						}
-					}
-				} else {
-					fmt.Println("it is directory")
-				}
 
+						var uploadFile data.Values
+
+						fileByte, err := ioutil.ReadFile(tempDirPath + path + "/" + fileName)
+						if err != nil {
+							fmt.Println(err.Error())
+						}
+						content := base64.StdEncoding.EncodeToString(fileByte)
+						uploadFile.Content = strings.Trim(content, " ")
+						uploadFile.Message = "Upload " + fileName + " via ENVI"
+						fmt.Println(uploadFile)
+						fbytes, _ := json.Marshal(uploadFile)
+						buff := bytes.NewBuffer(fbytes)
+						req, _ = http.NewRequest("PUT", "https://api.github.com/repos/"+user.GithubName+"/"+newapp.Name+"/contents"+path+"/"+fileName, buff)
+						req.Header.Set("content-type", "application/json")
+						req.Header.Set("authorization", "token "+user.GithubToken)
+						req.Header.Set("user-agent", user.GithubName)
+						_, err = http.DefaultClient.Do(req)
+						if err != nil {
+							fmt.Println(err.Error())
+							rd.JSON(rw, http.StatusOK, Success{false})
+						}
+					} else {
+						cmd = exec.Command("ls")
+						cmd.Dir = tempDirPath + path + "/" + fileName
+						contents, _ := cmd.Output()
+						newContList := strings.Split(string(contents), "\n")
+						upload(newContList, path+"/"+fileName)
+					}
+				}
 			}
+			return
 		}
+
+		upload(contentList, "")
 
 		// Jenkins Job Create
 		pw := os.Getenv("JENKINS_PW")
