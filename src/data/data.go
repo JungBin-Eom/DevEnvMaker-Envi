@@ -24,3 +24,9 @@ type Application struct {
 	Project     string `json:"project"`
 	Runtime     string `json:"runtime"`
 }
+
+type ValuesResponse struct {
+	Message string `json:"message"`
+	Content string `json:"content"`
+	SHA     string `json:"sha"`
+}

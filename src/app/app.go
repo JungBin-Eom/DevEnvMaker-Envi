@@ -2,11 +2,13 @@ package app
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -275,29 +277,6 @@ func (a *AppHandler) CreateProjectHandler(rw http.ResponseWriter, r *http.Reques
 		}
 		defer res.Body.Close()
 
-		// mybody, err := ioutil.ReadAll(res.Body)
-		// if err != nil {
-		// 	http.Error(rw, "Unable to read body", http.StatusBadRequest)
-		// }
-
-		// req, err := http.NewRequest("POST", "https://api.github.com/user/repos", buff)
-		// if err != nil {
-		// 	rd.JSON(rw, http.StatusOK, Success{false})
-		// }
-		// req.Header.Set("content-type", "application/json")
-		// req.Header.Set("authorization", "token "+user.GithubToken)
-		// req.Header.Set("user-agent", user.GithubName)
-
-		// res, err := http.DefaultClient.Do(req)
-		// if err != nil {
-		// 	rd.JSON(rw, http.StatusOK, Success{false})
-		// }
-		// defer res.Body.Close()
-		// _, err := ioutil.ReadAll(res.Body)
-		// if err != nil {
-		// 	http.Error(rw, "Unable to read body", http.StatusBadRequest)
-		// }
-
 		rd.JSON(rw, http.StatusOK, CreateSuccess{true, 0})
 	}
 }
@@ -305,6 +284,7 @@ func (a *AppHandler) CreateProjectHandler(rw http.ResponseWriter, r *http.Reques
 func (a *AppHandler) RemoveProjectHandler(rw http.ResponseWriter, r *http.Request) {
 	var project data.Project
 	sessionId := getSessionID(r)
+	user, _ := a.db.UserInfo(sessionId)
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&project)
 	if err != nil {
@@ -312,6 +292,7 @@ func (a *AppHandler) RemoveProjectHandler(rw http.ResponseWriter, r *http.Reques
 	}
 	ok := a.db.RemoveProject(project, sessionId)
 	if ok {
+		// remove jenkins folder
 		pw := os.Getenv("JENKINS_PW")
 		jenkins := gojenkins.CreateJenkins(nil, "http://jenkins.3.35.25.64.sslip.io", "admin", pw)
 		_, err = jenkins.Init(r.Context())
@@ -323,6 +304,7 @@ func (a *AppHandler) RemoveProjectHandler(rw http.ResponseWriter, r *http.Reques
 		if err != nil || deleteFolder == false {
 			rd.JSON(rw, http.StatusOK, Success{false})
 		} else {
+			// remove argocd project
 			argocdToken := os.Getenv("ARGOCD_TOKEN")
 			req, err := http.NewRequest("DELETE", "https://3.35.25.64:31286/api/v1/projects/"+project.Name, nil)
 			if err != nil {
@@ -335,6 +317,31 @@ func (a *AppHandler) RemoveProjectHandler(rw http.ResponseWriter, r *http.Reques
 			if err != nil {
 				rd.JSON(rw, http.StatusOK, Success{false})
 				return
+			}
+			appList := a.db.GetAppList(sessionId)
+			for _, app := range appList {
+				if app.Project == project.Name {
+					req, err := http.NewRequest("DELETE", "https://api.github.com/repos/"+user.GithubName+"/"+app.Name, nil)
+					if err != nil {
+						rd.JSON(rw, http.StatusInternalServerError, Success{false})
+						return
+					}
+					req.Header.Set("content-type", "application/json")
+					req.Header.Set("authorization", "token "+user.GithubToken)
+					req.Header.Set("user-agent", user.GithubName)
+
+					res, err := http.DefaultClient.Do(req)
+					if err != nil {
+						fmt.Println("github api error")
+						rd.JSON(rw, http.StatusBadRequest, Success{false})
+						return
+					}
+					_, err = ioutil.ReadAll(res.Body)
+					if err != nil {
+						http.Error(rw, "Unable to read body", http.StatusBadRequest)
+					}
+					res.Body.Close()
+				}
 			}
 			rd.JSON(rw, http.StatusOK, Success{true})
 		}
@@ -384,9 +391,25 @@ func (a *AppHandler) CreateAppHandler(rw http.ResponseWriter, r *http.Request) {
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
 		}
 
-		req, err := http.NewRequest("POST", "https://api.github.com/repos/Ricky-Envi/Envi-React/forks", nil)
+		pbytes, _ := json.Marshal(newapp)
+		buff := bytes.NewBuffer(pbytes)
+		req, err := http.NewRequest("POST", "https://api.github.com/user/repos", buff)
 		if err != nil {
-			rd.JSON(rw, http.StatusInternalServerError, CreateSuccess{false, 0})
+			rd.JSON(rw, http.StatusOK, Success{false})
+		}
+		req.Header.Set("content-type", "application/json")
+		req.Header.Set("authorization", "token "+user.GithubToken)
+		req.Header.Set("user-agent", user.GithubName)
+
+		_, err = http.DefaultClient.Do(req)
+		if err != nil {
+			rd.JSON(rw, http.StatusOK, Success{false})
+		}
+
+		// Add app info to values.yaml of App of Apps
+		req, err = http.NewRequest("GET", "https://api.github.com/repos/"+user.GithubName+"/Envi-ArgoCD/contents/AppOfApps/values.yaml", nil)
+		if err != nil {
+			rd.JSON(rw, http.StatusOK, Success{false})
 		}
 		req.Header.Set("content-type", "application/json")
 		req.Header.Set("authorization", "token "+user.GithubToken)
@@ -394,34 +417,107 @@ func (a *AppHandler) CreateAppHandler(rw http.ResponseWriter, r *http.Request) {
 
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
-			rd.JSON(rw, http.StatusBadRequest, CreateSuccess{false, 0})
+			rd.JSON(rw, http.StatusOK, Success{false})
 		}
-		_, err = ioutil.ReadAll(res.Body)
+		getValuesRes, err := ioutil.ReadAll(res.Body)
 		if err != nil {
 			http.Error(rw, "Unable to read body", http.StatusBadRequest)
 		}
 		res.Body.Close()
 
-		pbytes, _ := json.Marshal(newapp)
-		buff := bytes.NewBuffer(pbytes)
-		req, err = http.NewRequest("PATCH", "https://api.github.com/repos/"+user.GithubName+"/Envi-"+newapp.Runtime, buff)
+		var values data.ValuesResponse
+		json.Unmarshal(getValuesRes, &values)
+
+		valDec, _ := base64.StdEncoding.DecodeString(values.Content)
+		newAppVal := `
+  - appname: ` + newapp.Name + `
+    projectname: ` + newapp.Project + `
+    githuburl: https://github.com/` + user.GithubName + `/` + newapp.Name
+
+		valDec = []byte(string(valDec) + newAppVal)
+		valEnc := base64.URLEncoding.EncodeToString(valDec)
+		values.Content = valEnc
+		values.Message = "Add " + newapp.Name + " Info to ArgoCD values.yaml"
+
+		vbytes, _ := json.Marshal(values)
+		buff = bytes.NewBuffer(vbytes)
+		req, err = http.NewRequest("PUT", "https://api.github.com/repos/"+user.GithubName+"/Envi-ArgoCD/contents/AppOfApps/values.yaml", buff)
 		if err != nil {
-			rd.JSON(rw, http.StatusInternalServerError, CreateSuccess{false, 0})
+			rd.JSON(rw, http.StatusOK, Success{false})
 		}
 		req.Header.Set("content-type", "application/json")
 		req.Header.Set("authorization", "token "+user.GithubToken)
 		req.Header.Set("user-agent", user.GithubName)
 
-		res, err = http.DefaultClient.Do(req)
+		_, err = http.DefaultClient.Do(req)
 		if err != nil {
-			rd.JSON(rw, http.StatusBadRequest, CreateSuccess{false, 0})
+			rd.JSON(rw, http.StatusOK, Success{false})
 		}
-		_, err = ioutil.ReadAll(res.Body)
-		if err != nil {
-			http.Error(rw, "Unable to read body", http.StatusBadRequest)
-		}
-		res.Body.Close()
 
+		cmd := exec.Command("curl", "-LJO", "https://api.github.com/repos/Ricky-Envi/Envi-"+newapp.Runtime+"/tarball")
+		cmd.Dir = "/Users/ricky/Desktop/2021/Envi-Temp"
+		cmd.Run()
+
+		cmd = exec.Command("/bin/sh", "-c", "tar -xvzf Ricky-Envi-*")
+		cmd.Dir = "/Users/ricky/Desktop/2021/Envi-Temp"
+		cmd.Run()
+
+		cmd = exec.Command("/bin/sh", "-c", "rm -rf Ricky-Envi-*.tar.gz")
+		cmd.Dir = "/Users/ricky/Desktop/2021/Envi-Temp"
+		cmd.Run()
+
+		cmd = exec.Command("mkdir", "temp")
+		cmd.Dir = "/Users/ricky/Desktop/2021/Envi-Temp"
+		cmd.Run()
+
+		cmd = exec.Command("/bin/sh", "-c", "cp -rf Ricky-Envi-*/* temp")
+		cmd.Dir = "/Users/ricky/Desktop/2021/Envi-Temp"
+		cmd.Run()
+
+		cmd = exec.Command("/bin/sh", "-c", "rm -rf Ricky-Envi-*")
+		cmd.Dir = "/Users/ricky/Desktop/2021/Envi-Temp"
+		cmd.Run()
+
+		// git code download
+		cmd = exec.Command("ls")
+		cmd.Dir = "/Users/ricky/Desktop/2021/Envi-Temp/temp"
+		contents, _ := cmd.Output()
+		contentList := strings.Split(string(contents), "\n")
+
+		// var files map[string]string
+		for _, cont := range contentList {
+			cmd = exec.Command("file", cont)
+			cmd.Dir = "/Users/ricky/Desktop/2021/Envi-Temp/temp"
+			output, _ := cmd.Output()
+			fileInfo := strings.Split(string(output), ": ")
+			fmt.Println(fileInfo)
+			if len(fileInfo) == 2 {
+				fileType := fileInfo[1]
+				if fileType != "directory\n" {
+					fileName := strings.Split(fileInfo[0], " ")[0]
+					fmt.Println(fileName)
+					if fileName == "Jenkinsfile" {
+						fileByte, err := ioutil.ReadFile("/Users/ricky/Desktop/2021/Envi-Temp/temp/" + fileName)
+						if err != nil {
+							fmt.Println(err.Error())
+						}
+						fileContent := string(fileByte)
+						fileContent = strings.Replace(fileContent, "<GITHUB_URL>", "https://github.com/"+user.GithubName+"/"+newapp.Name, -1)
+						fileContent = strings.Replace(fileContent, "<APP_NAME>", newapp.Name, -1)
+						fmt.Println(fileContent)
+						err = ioutil.WriteFile("/Users/ricky/Desktop/2021/Envi-Temp/temp/"+fileName, []byte(fileContent), 0)
+						if err != nil {
+							fmt.Println(err.Error())
+						}
+					}
+				} else {
+					fmt.Println("it is directory")
+				}
+
+			}
+		}
+
+		// Jenkins Job Create
 		pw := os.Getenv("JENKINS_PW")
 		jenkins := gojenkins.CreateJenkins(nil, "http://jenkins.3.35.25.64.sslip.io", "admin", pw)
 		_, err = jenkins.Init(r.Context())
