@@ -7,27 +7,33 @@ ENVI는 '코딩은 하고싶지만 개발환경 구축이 어려워😢'라고 �
 
 #### `1. 사용자 등록`
 먼저 프로그램에 사용자를 등록하기 위해 회원가입을 진행해야 합니다. ENVI의 회원이 되기 위해서는 GitHub 계정을 필수로 가지고 있어야 합니다. 왜냐하면 ENVI의 모든 프로젝트 및 애플리케이션 동작은 사용자의 GitHub repository를 기반으로 수행되기 때문에 사용자는 GitHub 계정을 함께 등록해야 합니다. 로그인 과정에서는 GitHub OAuth를 포함하기 때문에 GitHub 계정으로도 ENVI에 로그인을 할 수 있습니다.  
-<img src="./images/login.png" width="600" height="400">  
+<br>
+<img src="./images/login.png">  
 <br>
 #### `2. GitHub 토큰 등록`
 로그인을 완료한 사용자는 GitHub 토큰을 등록해야합니다. 최근 GitHub의 credential 방식이 personal token으로 바뀐 만큼 ENVI 역시 사용자의 personal token을 사용하여 repository를 생성하고 파일을 업로드하도록 구현하였습니다.   
-<img src="./images/token.png" width="600" height="400"> 
-<br>
+<br>   
+<img src="./images/token.png"> 
+<br>   
 #### `3. 프로젝트 생성`
 애플리케이션을 생성하기 전에 프로젝트를 생성해야 합니다. 프로젝트는 애플리케이션들을 하나로 묶은 큰 단위입니다. 프로젝트를 생성하면 입력한 정보에 기반하여 Jenkins에는 폴더가 만들어지고 ArgoCD에는 프로젝트가 생성됩니다. 이러한 구분을 통해 서로 다른 프로젝트에 속한 애플리케이션들을 구분합니다.   
-<img src="./images/project.png" width="600" height="400">
-<br>
+<br>   
+<img src="./images/project.png">
+<br>   
 #### `4. 애플리케이션 생성`
 프로젝트를 생성했다면 프로젝트 정보 화면에서 애플리케이션을 생성할 수 있습니다. 애플리케이션을 생성하면 입력한 정보를 바탕으로 Jenkins Job과 GitHub repository가 생성되고 선택한 런타임에 따라 기본 애플리케이션 구조 및 빌드와 배포에 필요한 파일을 자동으로 업로드합니다. 이러한 파일들은 미리 만들어 둔 GitHub 계정에 업로드 된 파일로, 애플리케이션이 생성됨과 동시에 로컬로 파일을 다운로드받고 입력한 정보에 맞추어 파일 내용을 변경한 뒤 생성한 repository에 업로드하고 다운로드 받은 파일을 삭제합니다. 파일 다운로드 및 입출력, 바이트 처리를 수행하기 때문에 시간이 오래 소요됩니다.   
-<img src="./images/application.png" width="600" height="400">   
-<br>
+<br>   
+<img src="./images/application.png">   
+<br>   
 #### `5. 애플리케이션 빌드`
 빌드 버튼을 클릭하면 Jenkins Job이 트리거되어 애플리케이션을 Docker 이미지로 빌드합니다. Jenkins는 helm 차트를 통해 설치되었기 때문에 **docker in docker** 형태로 구축되어있습니다. 따라서 Job이 트리거되어 파이프라인이 실행될 때마다 Pod를 생성하여 동작합니다. 빌드를 하기 위한 Dockerfile과 Jenkinsfile은 미리 정의해두었지만 사용자가 개발하는 코드에 따라 변경되어야 할 수 있습니다. 빌드한 이미지는 enviproject Docker 계정으로 DockerHub에 업로드됩니다. 또한 빌드 진행 상황을 바 형태로 나타나게 하였습니다.   
-<img src="./images/jenkins.png" width="600" height="400">  
-<br>
+<br>   
+<img src="./images/jenkins.png">  
+<br>   
 #### `6. 애플리케이션 배포`
 배포 버튼을 클릭하면 Envi-Argo repository에 있는 helm 차트를 생성합니다. 이는 **appofapps** 패턴으로 구축되어있어, 하나의 프로젝트 내에 존재하는 다수의 애플리케이션을 한번에 관리할 수 있다는 장점을 가지고 있습니다. values.yaml 파일에 정의된 애플리케이션들을 배포하여 같은 형태로 관리합니다. appofapps 패턴은 토스 웨비나(Slash)를 참고하였습니다.  
-<img src="./images/project.png" width="600" height="400">
+<br>   
+<img src="./images/argocd.png">
 <br>   
 
 ---
