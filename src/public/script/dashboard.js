@@ -241,7 +241,7 @@ $("#deploy-app-btn").click(function(e){
       var status = 0;
       var running = false;
       var ok = false;
-      var delay = 500;
+      var delay = 100;
 
       function deploying() {         //  create a loop function
         setTimeout(function() {   //  call a 3s setTimeout when the loop is called
@@ -264,11 +264,11 @@ $("#deploy-app-btn").click(function(e){
               if (now.status == true && now.running == true) {
                 running, ok = true;
                 if (status >= 70) {
-                  delay = 3000;
+                  delay = 1000;
                 } else if (status >= 80) {
-                  delay = 4000;
+                  delay = 1500;
                 } else if (status >= 90) {
-                  delay = 5000;
+                  delay = 2000;
                 }
               } else if (now.status == true) {
                 ok = true;
